@@ -1,0 +1,3172 @@
+<title>かなろあシフト自動作成</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ホテルかなろあ シフト自動作成
+   配色・書体は shift_ai_prototype.html（SHIFT COPILOT）の設計に合わせています。
+   職種の色だけ、ホテルの担当（厨房／フロント／清掃／ホール）に置き換えています。 */
+
+:root {
+  --bg: #f1f3f5;
+  --surface: #ffffff;
+  --surface2: #f8f9fa;
+  --line: #e4e7ea;
+  --line2: #eef0f2;
+  --ink: #1f242a;
+  --ink2: #555d66;
+  --muted: #8d949c;
+
+  --accent: #3d5a80;
+  --accent-bg: #ecf0f5;
+  --accent-bd: #d3dae5;
+
+  /* 担当ごとの色 */
+  --kt: #8f6c33;  --kt-bg: #f6f1e7;  --kt-bd: #e6dcc7;   /* 厨房 */
+  --fr: #4a6285;  --fr-bg: #eceff4;  --fr-bd: #d3dae5;   /* フロント */
+  --cl: #417a61;  --cl-bg: #ebf2ee;  --cl-bd: #cfe0d7;   /* 清掃 */
+  --hl: #7d5a6e;  --hl-bg: #f4eef2;  --hl-bd: #e3d3dc;   /* ホール */
+  --ge: #5f6873;  --ge-bg: #f0f2f4;  --ge-bd: #dee2e6;   /* 全般 */
+
+  --bad: #a8564c;   --bad-bg: #f7ecea;  --bad-bd: #e6c9c4;
+  --warn: #a87a35;  --warn-bg: #f7f1e4; --warn-bd: #e8dcc0;
+  --ok: #417a61;    --ok-bg: #ebf2ee;   --ok-bd: #cfe0d7;
+  --sat: #3d6a94;   --sun: #a8564c;
+
+  --r: 10px;
+  --sh: 0 1px 2px rgba(31,36,42,.04), 0 4px 14px rgba(31,36,42,.05);
+
+  --disp: "Archivo", "Zen Kaku Gothic New", sans-serif;
+  --body: "Zen Kaku Gothic New", -apple-system, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15181c; --surface: #1c2126; --surface2: #21272d; --line: #2d343b; --line2: #262c33;
+    --ink: #e7ebef; --ink2: #b3bbc4; --muted: #848d97;
+    --accent: #7fa3cc; --accent-bg: #23303f; --accent-bd: #35485e;
+    --kt: #d2ab63; --kt-bg: #33291a; --kt-bd: #4a3c25;
+    --fr: #8fabd4; --fr-bg: #222c3a; --fr-bd: #33425a;
+    --cl: #78bd9c; --cl-bg: #1c2f27; --cl-bd: #2b4638;
+    --hl: #c199b1; --hl-bg: #2f242c; --hl-bd: #453540;
+    --ge: #a3acb6; --ge-bg: #262b31; --ge-bd: #363d45;
+    --bad: #e08b80; --bad-bg: #35211f; --bad-bd: #4e302c;
+    --warn: #dcae62; --warn-bg: #33291a; --warn-bd: #4a3c25;
+    --ok: #78bd9c; --ok-bg: #1c2f27; --ok-bd: #2b4638;
+    --sat: #7fa8d4; --sun: #e08b80;
+    --sh: 0 1px 2px rgba(0,0,0,.2), 0 4px 14px rgba(0,0,0,.24);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15181c; --surface: #1c2126; --surface2: #21272d; --line: #2d343b; --line2: #262c33;
+  --ink: #e7ebef; --ink2: #b3bbc4; --muted: #848d97;
+  --accent: #7fa3cc; --accent-bg: #23303f; --accent-bd: #35485e;
+  --kt: #d2ab63; --kt-bg: #33291a; --kt-bd: #4a3c25;
+  --fr: #8fabd4; --fr-bg: #222c3a; --fr-bd: #33425a;
+  --cl: #78bd9c; --cl-bg: #1c2f27; --cl-bd: #2b4638;
+  --hl: #c199b1; --hl-bg: #2f242c; --hl-bd: #453540;
+  --ge: #a3acb6; --ge-bg: #262b31; --ge-bd: #363d45;
+  --bad: #e08b80; --bad-bg: #35211f; --bad-bd: #4e302c;
+  --warn: #dcae62; --warn-bg: #33291a; --warn-bd: #4a3c25;
+  --ok: #78bd9c; --ok-bg: #1c2f27; --ok-bd: #2b4638;
+  --sat: #7fa8d4; --sun: #e08b80;
+  --sh: 0 1px 2px rgba(0,0,0,.2), 0 4px 14px rgba(0,0,0,.24);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--body); font-size: 13.5px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.app { max-width: 1400px; margin: 0 auto; padding: 0 20px 60px; }
+
+/* ---------- 上部 ---------- */
+.topbar { display: flex; align-items: center; gap: 14px; padding: 15px 0 13px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 9px; }
+.logo .mark {
+  width: 31px; height: 31px; border-radius: 8px; background: var(--ink); color: var(--surface);
+  display: grid; place-items: center; font-family: var(--disp); font-weight: 700; font-size: 12px;
+}
+.logo .nm { font-family: var(--disp); font-weight: 700; font-size: 14px; letter-spacing: .02em; }
+.logo .sub { font-size: 10.5px; color: var(--muted); letter-spacing: .05em; margin-top: -3px; }
+.store {
+  margin-left: 4px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; padding: 5px 11px; font-size: 12px; font-weight: 700; color: var(--ink2);
+}
+.topbar .spacer { flex: 1; }
+.monthpick { display: flex; align-items: center; gap: 5px; }
+.monthpick input { width: 4.6rem; text-align: right; }
+.monthpick input#month { width: 3.2rem; }
+.saved { font-size: 11px; color: var(--muted); min-width: 7rem; }
+
+/* ---------- ステップ ---------- */
+.stepper {
+  display: flex; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); overflow: hidden; box-shadow: var(--sh); margin-bottom: 18px;
+}
+.step {
+  flex: 1; display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  position: relative; min-width: 0; background: none; border: none; text-align: left; cursor: pointer;
+}
+.step + .step::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 1px; background: var(--line); }
+.step .no {
+  width: 21px; height: 21px; border-radius: 50%; border: 1.5px solid var(--line); color: var(--muted);
+  display: grid; place-items: center; font-family: var(--disp); font-weight: 700; font-size: 10.5px;
+  flex: none; transition: .3s;
+}
+.step .t { font-size: 12.5px; font-weight: 700; color: var(--muted); transition: .3s; white-space: nowrap; }
+.step .d { font-size: 10.5px; color: var(--muted); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.step.on .no { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.step.on .t { color: var(--ink); }
+.step.done .no { background: var(--ok); border-color: var(--ok); color: #fff; }
+.step.done .t { color: var(--ink2); }
+.step:disabled { cursor: default; }
+
+/* ---------- 共通 ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh); }
+.card + .card { margin-top: 12px; }
+.card-h { display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-bottom: 1px solid var(--line2); flex-wrap: wrap; }
+.card-h h2 { font-size: 13px; font-weight: 700; margin: 0; }
+.card-h .sub { font-size: 11px; color: var(--muted); }
+.card-h .r { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pad { padding: 14px 16px; }
+.eyebrow { font-family: var(--disp); font-size: 9.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); }
+.hint { font-size: 11.5px; color: var(--muted); margin: 6px 0; }
+h3 { font-size: 12px; font-weight: 700; margin: 14px 0 6px; }
+h3:first-child { margin-top: 0; }
+
+.btn {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font-weight: 700; font-size: 12.5px; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+  transition: .15s; display: inline-flex; align-items: center; gap: 7px;
+}
+.btn:hover { background: var(--surface2); }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.btn.primary:hover { filter: brightness(1.25); }
+.btn.go { background: var(--accent); border-color: var(--accent); color: #fff; font-size: 13.5px; padding: 11px 20px; }
+.btn.go:hover { filter: brightness(1.1); }
+.btn.go:disabled { background: var(--line); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
+.btn.sm { padding: 5px 10px; font-size: 11.5px; }
+.btn.danger { color: var(--bad); border-color: var(--bad-bd); }
+.seg { display: inline-flex; background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.seg button { border: none; background: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+
+input, select, textarea {
+  font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line);
+  border-radius: 7px; background: var(--surface); color: var(--ink);
+}
+textarea { width: 100%; font-family: var(--mono); font-size: 12px; line-height: 1.6; }
+label.inline { display: inline-flex; align-items: center; gap: 6px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 9px 0; }
+.or { color: var(--muted); font-size: 11.5px; }
+
+/* 担当タグ */
+.tag { display: inline-flex; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; white-space: nowrap; line-height: 1.6; border: 1px solid transparent; }
+.tag.厨房 { background: var(--kt-bg); color: var(--kt); border-color: var(--kt-bd); }
+.tag.フロント { background: var(--fr-bg); color: var(--fr); border-color: var(--fr-bd); }
+.tag.清掃 { background: var(--cl-bg); color: var(--cl); border-color: var(--cl-bd); }
+.tag.ホール { background: var(--hl-bg); color: var(--hl); border-color: var(--hl-bd); }
+.tag.全般 { background: var(--ge-bg); color: var(--ge); border-color: var(--ge-bd); }
+
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.status .pip { width: 6px; height: 6px; border-radius: 50%; }
+.status.done { color: var(--ok); } .status.done .pip { background: var(--ok); }
+.status.wait { color: var(--muted); } .status.wait .pip { background: var(--line); }
+
+/* ---------- 手順1：希望を集める ---------- */
+.grid1 { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 1080px) { .grid1 { grid-template-columns: 1fr; } }
+
+table.roster { width: 100%; border-collapse: collapse; }
+table.roster th {
+  font-size: 10px; font-weight: 700; color: var(--muted); text-align: left;
+  padding: 7px 9px; border-bottom: 1px solid var(--line); letter-spacing: .04em; white-space: nowrap;
+}
+table.roster td { padding: 8px 9px; border-bottom: 1px solid var(--line2); vertical-align: middle; }
+table.roster td .btn { white-space: nowrap; }
+table.roster th:nth-child(3), table.roster td:nth-child(3) { white-space: nowrap; }
+table.roster tbody tr:hover { background: var(--surface2); }
+.person { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.person .av {
+  width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  font-weight: 700; font-size: 10.5px; font-family: var(--disp);
+  background: var(--surface2); border: 1px solid var(--line); color: var(--ink2);
+}
+.person .n { font-size: 12.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+.person .m { font-size: 10px; color: var(--muted); line-height: 1.3; }
+
+/* 希望休の帯 */
+.strip { display: flex; gap: 2px; flex-wrap: nowrap; align-items: center; padding: 2px; border-radius: 7px; cursor: pointer; }
+.strip:hover { background: var(--surface2); }
+.dc {
+  flex: none; width: 15px; height: 24px; border-radius: 4px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-size: 9px; font-weight: 700; line-height: 1.05;
+  border: 1px solid var(--line2); background: var(--surface2); color: var(--muted);
+}
+.dc .dt { font-family: var(--disp); font-size: 7.5px; font-weight: 600; opacity: .75; }
+.dc.off { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-bd); }
+.dc.special { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-bd); }
+.dc.ng { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-bd); }
+.dc.sun .dt { color: var(--sun); } .dc.sat .dt { color: var(--sat); }
+.stripnote { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* 集計リング */
+.ringwrap { display: flex; align-items: center; gap: 14px; }
+.ring { position: relative; width: 84px; height: 84px; flex: none; }
+.ring svg { transform: rotate(-90deg); }
+.ring .val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.ring .val b { font-family: var(--disp); font-size: 20px; font-weight: 700; display: block; line-height: 1; }
+.ring .val i { font-style: normal; font-size: 9.5px; color: var(--muted); font-weight: 700; }
+.sumline { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line2); }
+.sumline:last-child { border-bottom: none; }
+.sumline span { font-size: 12px; color: var(--ink2); }
+.sumline b { font-family: var(--disp); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sumline b em { font-style: normal; font-size: 10.5px; color: var(--muted); font-weight: 500; margin-left: 2px; }
+
+/* ルール */
+.rulehead { font-size: 10.5px; font-weight: 700; color: var(--muted); margin: 12px 0 6px; letter-spacing: .03em; }
+.rulehead:first-child { margin-top: 0; }
+.rule { display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; color: var(--ink2); line-height: 1.5; margin: 5px 0; }
+.rule .ic { width: 5px; height: 5px; border-radius: 50%; flex: none; margin-top: 7px; }
+.rule.hard .ic { background: var(--bad); }
+.rule.soft .ic { background: var(--accent); }
+
+.launch {
+  margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 16px 18px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: var(--sh);
+}
+.launch .lt { font-size: 13.5px; font-weight: 700; }
+.launch .ld { font-size: 11.5px; color: var(--muted); }
+.launch .spacer { flex: 1; }
+
+/* ---------- 手順2：組む ---------- */
+.runhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.runhead .h { font-size: 15px; font-weight: 700; }
+.runhead .s { font-size: 11.5px; color: var(--muted); }
+.pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); animation: pz 1.1s ease-in-out infinite; }
+@keyframes pz { 0%,100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; opacity: 1; } }
+.rungrid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+@media (max-width: 1080px) { .rungrid { grid-template-columns: 1fr; } }
+.progwrap { height: 6px; background: var(--surface2); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+.progbar { height: 100%; background: var(--accent); width: 0; transition: width .12s linear; }
+.runstat { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 7px; font-variant-numeric: tabular-nums; }
+.mcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; box-shadow: var(--sh); }
+.mcard + .mcard { margin-top: 12px; }
+.mcard .lab { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; font-family: var(--disp); }
+.bignum { font-family: var(--disp); font-size: 30px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.mrow { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--line2); font-size: 12px; }
+.mrow:last-child { border-bottom: none; }
+.mrow .k2 { color: var(--ink2); }
+.mrow .v { font-family: var(--disp); font-weight: 700; font-variant-numeric: tabular-nums; }
+.runlog {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh);
+  font-family: var(--mono); font-size: 11.5px; max-height: 300px; overflow: auto;
+}
+.runlog .lrow { padding: 5px 14px; border-bottom: 1px solid var(--line2); display: flex; gap: 12px; white-space: nowrap; }
+.runlog .lrow:last-child { border-bottom: none; }
+.runlog .it { color: var(--muted); font-variant-numeric: tabular-nums; }
+.runlog .msg { color: var(--ink2); }
+.runlog .good { color: var(--ok); font-weight: 500; }
+
+/* ---------- 手順3：確認 ---------- */
+.reshead { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.reshead h2 { font-size: 17px; font-weight: 700; margin: 0; }
+.reshead .s { font-size: 11.5px; color: var(--muted); }
+.reshead .r { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 15px; box-shadow: var(--sh); }
+.kpi .k { font-size: 10.5px; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.kpi .v { font-family: var(--disp); font-size: 25px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.kpi .n { font-size: 10.5px; color: var(--muted); }
+.kpi.bad { border-color: var(--bad-bd); background: var(--bad-bg); }
+.kpi.bad .v { color: var(--bad); }
+.kpi.ok .v { color: var(--ok); }
+.headline { font-size: 14px; font-weight: 700; padding: 11px 15px; border-radius: var(--r); border: 1px solid; margin-bottom: 12px; }
+.headline.good { color: var(--ok); background: var(--ok-bg); border-color: var(--ok-bd); }
+.headline.bad { color: var(--bad); background: var(--bad-bg); border-color: var(--bad-bd); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+@media (max-width: 980px) { .two { grid-template-columns: 1fr; } }
+
+/* シフト表 */
+.sheetwrap { overflow: auto; max-width: 100%; border-radius: 0 0 var(--r) var(--r); }
+table.sheet { border-collapse: separate; border-spacing: 0; font-size: 12px; width: max-content; }
+table.sheet th, table.sheet td { border-right: 1px solid var(--line2); border-bottom: 1px solid var(--line2); padding: 3px 4px; text-align: center; white-space: nowrap; }
+table.sheet thead th { background: var(--surface2); position: sticky; top: 0; z-index: 3; font-weight: 700; font-size: 10px; color: var(--muted); letter-spacing: .04em; }
+table.sheet th.day { min-width: 36px; line-height: 1.2; padding: 6px 3px; position: relative; }
+table.sheet th.day .dnum { font-family: var(--disp); font-size: 14px; font-weight: 700; color: var(--ink); }
+table.sheet th.day .dow { font-size: 10px; color: var(--muted); }
+table.sheet th.day .rooms { font-size: 9.5px; color: var(--muted); }
+table.sheet th.day.sun .dow { color: var(--sun); } table.sheet th.day.sat .dow { color: var(--sat); }
+table.sheet th.day.closed { background: var(--line2); }
+table.sheet th.day.today { background: var(--ink); }
+table.sheet th.day.today .dnum, table.sheet th.day.today .dow, table.sheet th.day.today .rooms { color: var(--surface); }
+.stick { position: sticky; background: var(--surface); z-index: 2; text-align: left !important; }
+table.sheet thead .stick { z-index: 4; background: var(--surface2); }
+.stick.c1 { left: 0; min-width: 46px; font-size: 10px; color: var(--muted); }
+.stick.c2 { left: 46px; min-width: 150px; font-weight: 700; font-size: 12px; }
+.stick.c3 { left: 196px; min-width: 132px; }
+.stick.c4 { left: 328px; min-width: 44px; text-align: center !important; font-family: var(--disp); font-weight: 700; }
+table.sheet tr.group-top > td { border-top: 2px solid var(--line); }
+
+td.cell { position: relative; cursor: pointer; min-width: 36px; height: 29px; font-weight: 700; font-size: 12px; }
+td.cell[draggable="true"]:hover { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 1; }
+td.cell.off { color: var(--muted); font-weight: 400; background: var(--surface2); }
+td.cell.special { background: var(--warn-bg); color: var(--warn); }
+td.cell.ng { background: var(--bad-bg); color: var(--bad); }
+td.cell.requested::after { content: ''; position: absolute; left: 3px; right: 3px; bottom: 2px; height: 2px; background: var(--accent); border-radius: 2px; }
+td.cell.always-work { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--line2) 4px, var(--line2) 8px); }
+td.cell.sun { box-shadow: inset 0 0 0 99px rgba(168,86,76,.05); }
+td.cell.sat { box-shadow: inset 0 0 0 99px rgba(61,106,148,.05); }
+td.cell.today { box-shadow: inset 2px 0 0 var(--ink), inset -2px 0 0 var(--ink); }
+td.cell.dragging { opacity: .35; }
+td.cell.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
+td.cell.no { outline: 2px dashed var(--bad); outline-offset: -2px; }
+table.sheet tbody:not(.foot) tr:hover td.cell { filter: brightness(.97); }
+table.sheet tbody:not(.foot) tr:hover .stick.c2 { color: var(--accent); }
+.col-hi::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: rgba(61,90,128,.08); }
+tbody.foot td { background: var(--surface2); font-size: 11px; color: var(--muted); position: relative; font-variant-numeric: tabular-nums; }
+tbody.foot tr:nth-child(-n+2) td.num { font-weight: 700; color: var(--ink); font-family: var(--disp); }
+tbody.foot td.num.warn { color: var(--bad); font-weight: 700; background: var(--bad-bg); }
+tbody.foot td.label { font-weight: 700; color: var(--ink2); text-align: left; }
+
+/* パターンの色 */
+.p-A { background: var(--fr-bg); color: var(--fr); }
+.p-B { background: var(--fr-bg); color: var(--fr); }
+.p-C { background: var(--hl-bg); color: var(--hl); }
+.p-D { background: var(--kt-bg); color: var(--kt); }
+.p-E { background: var(--hl-bg); color: var(--hl); }
+.p-F { background: var(--warn-bg); color: var(--warn); }
+.p-G { background: var(--kt-bg); color: var(--kt); }
+.p-H { background: var(--cl-bg); color: var(--cl); }
+
+/* 凡例 */
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.legend-item { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 99px; padding: 3px 11px 3px 4px; background: var(--surface); font-size: 11.5px; }
+.legend-item b { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 6px; font-size: 12px; font-family: var(--disp); }
+.legend-h { font-size: 10.5px; color: var(--muted); }
+
+/* 申し送り */
+.note { display: flex; gap: 9px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line2); }
+.note:last-child { border-bottom: none; }
+.note .ic { width: 6px; height: 6px; border-radius: 50%; flex: none; margin-top: 7px; }
+.note.bad .ic { background: var(--bad); } .note.warn .ic { background: var(--warn); } .note.ok .ic { background: var(--ok); }
+.note .bd { min-width: 0; flex: 1; }
+.note .t { font-size: 12px; font-weight: 700; }
+.note .d { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.note select { margin-top: 5px; max-width: 100%; }
+
+/* 個人別 */
+.psum { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line2); }
+.psum:last-child { border-bottom: none; }
+.psum .nm { font-size: 12px; font-weight: 700; width: 116px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.psum .bar { flex: 1; height: 7px; background: var(--surface2); border-radius: 99px; overflow: hidden; min-width: 40px; }
+.psum .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.psum .bar i.over { background: var(--warn); }
+.psum .nums { font-family: var(--disp); font-size: 11.5px; font-weight: 700; width: 108px; text-align: right; flex: none; font-variant-numeric: tabular-nums; color: var(--ink2); }
+
+/* 日別タイムライン */
+.daystrip { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; }
+.dbtn {
+  flex: none; width: 46px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px;
+  padding: 6px 2px; cursor: pointer; text-align: center; line-height: 1.25;
+}
+.dbtn .n { font-family: var(--disp); font-size: 14px; font-weight: 700; }
+.dbtn .w { font-size: 9.5px; color: var(--muted); }
+.dbtn .r { font-size: 9px; color: var(--muted); }
+.dbtn.on { background: var(--ink); border-color: var(--ink); }
+.dbtn.on .n, .dbtn.on .w, .dbtn.on .r { color: var(--surface); }
+.dbtn.short { border-color: var(--bad-bd); background: var(--bad-bg); }
+.dbtn.short.on { background: var(--bad); border-color: var(--bad); }
+.tlwrap { overflow-x: auto; }
+table.tl { border-collapse: separate; border-spacing: 0; font-size: 11.5px; width: max-content; min-width: 100%; }
+table.tl th, table.tl td { border-right: 1px solid var(--line2); border-bottom: 1px solid var(--line2); }
+table.tl thead th { background: var(--surface2); font-size: 10px; font-weight: 700; color: var(--muted); padding: 5px 0; text-align: center; font-family: var(--disp); }
+table.tl .who { position: sticky; left: 0; background: var(--surface); text-align: left; padding: 4px 9px; min-width: 168px; z-index: 2; }
+table.tl thead .who { background: var(--surface2); z-index: 3; }
+table.tl .who .n { font-size: 11.5px; font-weight: 700; }
+table.tl .who .p { font-size: 9.5px; color: var(--muted); }
+table.tl td.h { height: 26px; min-width: 34px; padding: 0; }
+table.tl td.h.on { background: var(--accent-bg); box-shadow: inset 0 0 0 1px var(--accent-bd); }
+table.tl td.h.on.k厨房 { background: var(--kt-bg); box-shadow: inset 0 0 0 1px var(--kt-bd); }
+table.tl td.h.on.kフロント { background: var(--fr-bg); box-shadow: inset 0 0 0 1px var(--fr-bd); }
+table.tl td.h.on.k清掃 { background: var(--cl-bg); box-shadow: inset 0 0 0 1px var(--cl-bd); }
+table.tl td.h.on.kホール { background: var(--hl-bg); box-shadow: inset 0 0 0 1px var(--hl-bd); }
+table.tl td.h.on.k全般 { background: var(--ge-bg); box-shadow: inset 0 0 0 1px var(--ge-bd); }
+table.tl tr.count td { background: var(--surface2); text-align: center; font-family: var(--disp); font-weight: 700; font-size: 11px; color: var(--ink2); }
+table.tl tr.count td.low { background: var(--bad-bg); color: var(--bad); }
+table.tl tr.count .who { text-align: left; font-family: var(--body); }
+
+/* 取り込み結果 */
+.ok-list { list-style: none; padding: 0; margin: 6px 0 0; }
+.ok-list li { padding: 5px 0; border-bottom: 1px solid var(--line2); font-size: 12px; }
+.ok-list li:last-child { border-bottom: none; }
+.check-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.check-list li {
+  border: 1px solid var(--warn-bd); border-left: 3px solid var(--warn); border-radius: 8px;
+  padding: 8px 11px; background: var(--warn-bg); display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.check-list li.resolved { border-color: var(--ok-bd); border-left-color: var(--ok); background: var(--ok-bg); color: var(--ok); }
+.check-who { font-weight: 700; font-size: 12px; }
+.check-why { font-size: 11px; color: var(--warn); }
+.check-text { font-size: 11px; color: var(--muted); width: 100%; font-family: var(--mono); }
+.check-list li.resolved .check-why, .check-list li.resolved .check-text { color: var(--ok); }
+
+/* 客室数 */
+.rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-top: 10px; }
+.room-cell { border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: var(--surface); }
+.room-day { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+.room-day .dw { color: var(--muted); font-weight: 400; }
+.room-cell.sun .room-day .dw { color: var(--sun); } .room-cell.sat .room-day .dw { color: var(--sat); }
+.room-cell input[type=number] { width: 100%; }
+.room-need { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* 一覧テーブル（スタッフ・条件） */
+table.form-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+table.form-table th, table.form-table td { border: 1px solid var(--line2); padding: 5px 7px; text-align: left; vertical-align: middle; }
+table.form-table thead th { background: var(--surface2); font-size: 10px; color: var(--muted); letter-spacing: .04em; white-space: nowrap; }
+table.form-table input[type=text] { width: 100%; min-width: 88px; }
+.num-input { width: 4rem; }
+td.chips { white-space: nowrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 99px; padding: 2px 8px; margin: 1px; font-size: 11px; cursor: pointer; }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+table.mini { border-collapse: collapse; font-size: 12px; margin: 6px 0; }
+table.mini th, table.mini td { border: 1px solid var(--line2); padding: 4px 10px; text-align: center; }
+table.mini th { background: var(--surface2); font-size: 10.5px; color: var(--muted); }
+table.mini tr.sub td, table.mini tr.sub th { color: var(--muted); font-size: 11px; font-weight: 400; }
+.opts { display: flex; gap: 18px; flex-wrap: wrap; }
+.opts label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.opts input[type=number] { width: 5rem; }
+
+/* ポップアップ・トースト */
+.mask { position: fixed; inset: 0; background: rgba(31,36,42,.32); display: none; z-index: 60; align-items: center; justify-content: center; padding: 20px; }
+.mask.show { display: flex; }
+.modal { background: var(--surface); border-radius: 14px; width: min(720px, 100%); max-height: 86vh; overflow: auto; box-shadow: 0 24px 60px rgba(31,36,42,.24); }
+.modal .mh { display: flex; align-items: center; gap: 11px; padding: 15px 19px; border-bottom: 1px solid var(--line2); position: sticky; top: 0; background: var(--surface); z-index: 2; }
+.modal .mh h2 { font-size: 14px; margin: 0; }
+.modal .mh .x { margin-left: auto; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal .ch { text-align: center; font-size: 10.5px; font-weight: 700; color: var(--muted); padding-bottom: 2px; }
+.cal .ch.sun { color: var(--sun); } .cal .ch.sat { color: var(--sat); }
+.cal .cd { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 4px; min-height: 52px; background: var(--surface2); cursor: pointer; text-align: center; }
+.cal .cd.empty { background: none; border: none; cursor: default; }
+.cal .cd .dn { font-family: var(--disp); font-size: 12.5px; font-weight: 700; }
+.cal .cd .sy { font-size: 15px; font-weight: 700; line-height: 1.2; }
+.cal .cd.off { background: var(--accent-bg); border-color: var(--accent-bd); color: var(--accent); }
+.cal .cd.special { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--warn); }
+.cal .cd.ng { background: var(--bad-bg); border-color: var(--bad-bd); color: var(--bad); }
+.popup { position: absolute; z-index: 70; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 12px 34px rgba(31,36,42,.2); padding: 11px; width: 264px; }
+.popup.hidden { display: none; }
+.pop-head { font-weight: 700; font-size: 12px; margin-bottom: 8px; }
+.pop-opts { display: grid; gap: 3px; max-height: 262px; overflow: auto; }
+.pop-opt { text-align: left; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 5px 9px; font-size: 11.5px; border-radius: 6px; cursor: pointer; }
+.pop-opt.current { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+.pop-opt.foreign { opacity: .5; }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 9px 18px; border-radius: 99px; font-size: 12.5px; font-weight: 700; z-index: 80; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.toast.hidden { display: none; }
+.empty { padding: 26px; text-align: center; color: var(--muted); font-size: 12.5px; }
+.flow { padding-left: 20px; font-size: 12.5px; }
+.flow li { margin: 5px 0; }
+</style>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="logo">
+      <div class="mark">KA</div>
+      <div><div class="nm">SHIFT PLANNER</div><div class="sub">ホテルかなろあ</div></div>
+    </div>
+    <div class="store" id="storeLabel">渡嘉敷島 本館</div>
+    <div class="spacer"></div>
+    <div class="monthpick">
+      <button id="prevMonth" class="btn sm" title="前の月">◀</button>
+      <input type="number" id="year" min="2024" max="2035" step="1">
+      <span>年</span>
+      <input type="number" id="month" min="1" max="12" step="1">
+      <span>月</span>
+      <button id="nextMonth" class="btn sm" title="次の月">▶</button>
+    </div>
+    <span class="saved" id="saveState"></span>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <button class="step on" data-s="1"><div class="no">1</div><div><div class="t">希望を集める</div><div class="d" id="stepSub1">—</div></div></button>
+    <button class="step" data-s="2"><div class="no">2</div><div><div class="t">シフトを組む</div><div class="d" id="stepSub2">条件を満たす配置を探す</div></div></button>
+    <button class="step" data-s="3"><div class="no">3</div><div><div class="t">確認して仕上げる</div><div class="d" id="stepSub3">手直ししてコピー</div></div></button>
+  </div>
+
+  <!-- ============ 手順1 ============ -->
+  <section id="scCollect">
+    <div class="grid1">
+      <div>
+        <div class="card">
+          <div class="card-h">
+            <h2>希望休の提出状況</h2>
+            <span class="sub" id="collectSub">—</span>
+            <div class="r">
+              <button class="btn sm" id="btnClearReq">今月の希望休を消す</button>
+            </div>
+          </div>
+          <div class="pad" style="padding-top:4px">
+            <div style="overflow:auto">
+              <table class="roster">
+                <thead><tr>
+                  <th style="width:190px">スタッフ</th>
+                  <th style="width:150px">担当</th>
+                  <th style="width:88px">提出</th>
+                  <th>希望休</th>
+                </tr></thead>
+                <tbody id="rosterBody"></tbody>
+              </table>
+            </div>
+            <p class="stripnote">行をクリックすると、その人の希望休カレンダーが開きます。帯の色 ― <b style="color:var(--accent)">休</b> 希望休 ／ <b style="color:var(--warn)">特</b> 特別休暇 ／ <b style="color:var(--bad)">✖</b> 不在・NG</p>
+            <div id="streakWishes" hidden></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>希望休を取り込む</h2>
+            <div class="r">
+              <div class="seg" id="importMode">
+                <button data-mode="msg" class="on">LINE・メッセージ</button>
+                <button data-mode="csv">Googleフォーム（CSV）</button>
+              </div>
+            </div>
+          </div>
+          <div class="pad">
+            <p class="hint" id="hintMsg">届いたメッセージをそのまま貼り付けてください。<b>名前と日にちが入っていれば形式は問いません</b>。苗字だけ・下の名前だけでも照合します。「10日まで出勤」「3連休が取りたい」のような書き方にも対応します。</p>
+            <p class="hint" id="hintCsv" hidden>回答スプレッドシートを「ファイル ▸ ダウンロード ▸ カンマ区切り形式(.csv)」で保存し、そのファイルを選ぶか、中身を貼り付けてください。</p>
+            <div class="row" id="rowCsv" hidden>
+              <input type="file" id="csvFile" accept=".csv,text/csv">
+              <span class="or">または</span>
+              <button id="pasteSample" class="btn sm">記入例を入れる</button>
+            </div>
+            <div class="row" id="rowMsg">
+              <button id="pasteMsgSample" class="btn sm">記入例を入れる</button>
+            </div>
+            <textarea id="csvText" rows="5" placeholder="ここにメッセージを貼り付け"></textarea>
+            <div id="csvMapping" class="row"></div>
+            <div class="row">
+              <button id="importCsv" class="btn primary">取り込む</button>
+              <label class="inline"><input type="checkbox" id="csvReplace"> 取り込む前に今月の希望休を消す</label>
+            </div>
+            <div id="csvResult"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>予約客室数</h2>
+            <span class="sub">全28室。入れた数に応じて必要人数が変わります</span>
+            <div class="r">
+              <label class="inline">空欄の日の既定値 <input type="number" id="defaultRooms" min="0" max="28" class="num-input"> 室</label>
+            </div>
+          </div>
+          <div class="pad">
+            <div class="row">
+              <button id="applyRoomsPaste" class="btn sm">貼り付けから取り込む</button>
+              <span class="or">1日目から順に数値を並べるか、「3&#9;12」のように日付と客室数の組で</span>
+            </div>
+            <textarea id="roomsPaste" rows="2" placeholder="例: 8 8 12 24 24 16 …"></textarea>
+            <div id="roomsGrid" class="rooms-grid"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>詳細設定</h2>
+            <span class="sub">スタッフ名簿・必要人員のルール・全体の条件</span>
+            <div class="r"><button class="btn sm" id="btnToggleAdv">開く</button></div>
+          </div>
+          <div class="pad" id="advBody" hidden>
+            <h3>スタッフ</h3>
+            <p class="hint">担当と対応パターンが、その人に割り当て可能な仕事を決めます。「常勤（記号なし）」は出勤日を空欄、休みだけ記号で出します。</p>
+            <div class="row">
+              <button id="addMember" class="btn sm">スタッフを追加</button>
+              <button id="resetMembers" class="btn sm danger">初期値に戻す</button>
+            </div>
+            <div style="overflow:auto"><div id="staffTable"></div></div>
+
+            <h3>必要人員のルール</h3>
+            <p class="hint">必要人数 ＝ 基本人数 ＋ (予約客室数 ÷ 加算間隔) ／ 上限まで。既定値は R8 7月・8月の実績（1日 7〜10名）に合わせています。</p>
+            <div style="overflow:auto"><div id="rulesTable"></div></div>
+            <div class="row">
+              <button id="addRule" class="btn sm">枠を追加</button>
+              <button id="resetRules" class="btn sm danger">初期値に戻す</button>
+            </div>
+            <div id="rulesPreview"></div>
+
+            <h3>全体の条件</h3>
+            <div class="opts">
+              <label>連勤の上限 <input type="number" id="optMaxConsecutive" min="1" max="14"> 日</label>
+              <label>月の最低休日数 <input type="number" id="optMinOff" min="0" max="15"> 日</label>
+              <label>探索の試行回数 <input type="number" id="optIterations" min="10" max="3000" step="10"> 回</label>
+              <label class="inline"><input type="checkbox" id="optKeepPattern"> 前日と同じパターンを優先する</label>
+            </div>
+
+            <h3>勤務パターン</h3>
+            <div id="patternTable"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-h"><h2>集計</h2></div>
+          <div class="pad">
+            <div class="ringwrap">
+              <div class="ring">
+                <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+                  <circle cx="42" cy="42" r="35" fill="none" stroke="var(--line2)" stroke-width="8"/>
+                  <circle id="ringArc" cx="42" cy="42" r="35" fill="none" stroke="var(--ok)" stroke-width="8"
+                    stroke-linecap="round" stroke-dasharray="219.9" stroke-dashoffset="219.9"
+                    style="transition:stroke-dashoffset .6s cubic-bezier(.3,.9,.3,1)"/>
+                </svg>
+                <div class="val"><div><b id="ringNum">—</b><i>提出済み</i></div></div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="sumline"><span>今月の必要枠</span><b id="sNeed">—<em>枠</em></b></div>
+                <div class="sumline"><span>集まった希望休</span><b id="sWish">—<em>日</em></b></div>
+                <div class="sumline"><span>連休の希望</span><b id="sStreak">—<em>件</em></b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>守る条件</h2></div>
+          <div class="pad" style="padding-top:10px">
+            <div class="rulehead">必ず守る</div>
+            <div id="ruleHard"></div>
+            <div class="rulehead">できるだけ守る</div>
+            <div id="ruleSoft"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="launch">
+      <div>
+        <div class="lt" id="launchTitle">—</div>
+        <div class="ld" id="launchNote">—</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn go" id="btnRun">シフトを組む</button>
+    </div>
+  </section>
+
+  <!-- ============ 手順2 ============ -->
+  <section id="scRun" hidden>
+    <div class="runhead">
+      <span class="pulse" id="runPulse"></span>
+      <div><div class="h" id="runTitle">配置を探しています</div><div class="s" id="runSub">—</div></div>
+      <div style="margin-left:auto"><button class="btn" id="btnRunStop">中断する</button></div>
+    </div>
+    <div class="rungrid">
+      <div>
+        <div class="card">
+          <div class="card-h"><h2>探索の進み</h2><span class="sub">数字はすべて実際の探索結果です</span></div>
+          <div class="pad">
+            <div class="progwrap"><div class="progbar" id="progBar"></div></div>
+            <div class="runstat"><span id="progLeft">—</span><span id="progRight">—</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-h"><h2>良くなった記録</h2><span class="sub">より良い配置が見つかった試行だけ残ります</span></div>
+          <div class="runlog" id="runLog" style="border:none;box-shadow:none;border-radius:0 0 var(--r) var(--r)"></div>
+        </div>
+      </div>
+      <div>
+        <div class="mcard">
+          <div class="lab">試した配置</div>
+          <div class="bignum" id="mTried">0</div>
+          <div class="mrow"><span class="k2">人が足りない枠</span><span class="v" id="mShort">—</span></div>
+          <div class="mrow"><span class="k2">枠の充足率</span><span class="v" id="mFill">—</span></div>
+          <div class="mrow"><span class="k2">月の総工数</span><span class="v" id="mHours">—</span></div>
+          <div class="mrow"><span class="k2">評価値（低いほど良い）</span><span class="v" id="mCost">—</span></div>
+        </div>
+        <div class="mcard">
+          <div class="lab" style="margin-bottom:8px">確認した条件</div>
+          <div id="runChecks"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 手順3 ============ -->
+  <section id="scRes" hidden>
+    <div class="reshead">
+      <div>
+        <h2 id="resTitle">—</h2>
+        <div class="s">ホテルかなろあ ／ 自動作成 — 手直しできます</div>
+      </div>
+      <div class="r">
+        <div class="seg" id="viewSeg">
+          <button data-v="sheet" class="on">シフト表</button>
+          <button data-v="tl">日別タイムライン</button>
+        </div>
+        <button class="btn" id="btnRedo">別の案で組み直す</button>
+        <button class="btn" id="btnBack1">条件を変える</button>
+        <button class="btn primary" id="btnCopy">スプレッドシートにコピー</button>
+        <button class="btn" id="btnCsv">CSV</button>
+      </div>
+    </div>
+
+    <div id="headline" class="headline good"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div id="sheetView">
+      <div class="card">
+        <div class="card-h">
+          <h2>シフト表</h2>
+          <span class="sub">セルをドラッグして入れ替え／クリックで直接変更</span>
+          <div class="r">
+            <label class="inline"><input type="checkbox" id="showTimes"> 開始時刻で見る</label>
+            <label class="inline"><input type="checkbox" id="bigText"> 文字を大きく</label>
+            <label class="inline"><input type="checkbox" id="showLegend" checked> 凡例</label>
+          </div>
+        </div>
+        <div class="pad" id="legendPad"><div id="legend" class="legend"></div></div>
+        <div class="sheetwrap"><div id="shiftGrid"></div></div>
+      </div>
+
+      <div class="two">
+        <div class="card">
+          <div class="card-h"><h2>申し送り</h2><span class="sub">直したほうがよい点と、その場で直せる操作</span></div>
+          <div class="pad" style="padding-top:4px"><div id="notes"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>個人別サマリー</h2><span class="sub">出勤日数 / 休み / 最大連勤</span></div>
+          <div class="pad" style="padding-top:8px"><div id="persum"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tlView" hidden>
+      <div class="card">
+        <div class="card-h"><h2>日を選ぶ</h2><span class="sub">赤い日は人が足りていません</span></div>
+        <div class="pad" style="padding-top:10px"><div class="daystrip" id="daystrip"></div></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-h">
+          <h2 id="tlTitle">—</h2>
+          <span class="sub" id="tlSub">—</span>
+        </div>
+        <div class="pad">
+          <div class="tlwrap"><div id="timeline"></div></div>
+          <p class="hint">一番下の行は、その時間帯に館内にいる人数です。中抜けのパターン（C・D・E・H）は、休憩の時間帯が空きます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="cellPopup" class="popup hidden"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script type="module">
+/* ===== js/model.js ===== */
+// ホテルかなろあ シフト自動作成 ― データモデル
+// パターン定義・スタッフ初期値・必要人員ルールは、既存の「シフト_2024」スプレッドシート
+// （パターンシート / R8 7月・8月の実績）から起こしています。
+
+const PATTERNS = {
+  A: { code: 'A', time: '8:00〜17:00',              hours: 8, rest: 1 },
+  B: { code: 'B', time: '9:00〜18:00',              hours: 8, rest: 1 },
+  C: { code: 'C', time: '8:00〜10:00 / 15:30〜21:30', hours: 8, rest: 5 },
+  D: { code: 'D', time: '11:00〜14:00 / 16:00〜21:00', hours: 8, rest: 2 },
+  E: { code: 'E', time: '6:00〜8:00 / 16:00〜22:00',  hours: 8, rest: 8 },
+  F: { code: 'F', time: '17:30〜21:30',             hours: 4, rest: 0 },
+  G: { code: 'G', time: '10:00〜15:00',             hours: 5, rest: 0 },
+  H: { code: 'H', time: '6:00〜10:00 / 11:00〜15:00', hours: 8, rest: 1 },
+};
+const PATTERN_CODES = Object.keys(PATTERNS);
+
+/**
+ * パターンの就労時間を数値の区間に開く。日別タイムラインで「何時に何人いるか」を出すため。
+ * 中抜け（C・D・E・H）は区間が2つになる。
+ * 例: 'C' → [{from: 8, to: 10}, {from: 15.5, to: 21.5}]
+ */
+function patternSegments(code) {
+  const p = PATTERNS[code];
+  if (!p) return [];
+  const num = (s) => {
+    const [h, m] = s.trim().split(':').map(Number);
+    return h + (m || 0) / 60;
+  };
+  return p.time.split('/').map((span) => {
+    const [a, b] = span.split('〜');
+    return { from: num(a), to: num(b) };
+  });
+}
+
+/** タイムラインで見せる時間帯（6:00〜22:00） */
+const DAY_START = 6;
+const DAY_END = 22;
+
+// 勤務以外の記号（スプレッドシートで実際に使われているもの）
+const OFF_SYMBOLS = {
+  '休': { label: '休み',       kind: 'off' },
+  '特': { label: '特別休暇',   kind: 'off' },
+  '✖': { label: '不在・NG',   kind: 'off' },
+  '夜': { label: '夜勤・夜対応', kind: 'work' },
+  '屋': { label: '屋台',       kind: 'work' },
+  '出': { label: '出張',       kind: 'work' },
+};
+
+const ROLES = ['厨房', 'フロント', '清掃', 'ホール', '全般'];
+
+// 割当モード
+//  auto   … パターン（A〜H）を自動で割り当てる
+//  always … 記号なしの常勤。希望休・固定休以外は出勤（セルは空欄のまま）
+//  manual … 自動では触らない（役員など。人が直接入力する）
+const ASSIGN_MODES = {
+  auto:   '自動割当',
+  always: '常勤（記号なし）',
+  manual: '手入力のみ',
+};
+
+function defaultMembers() {
+  const m = (name, opts) => ({
+    id: crypto.randomUUID(),
+    name,
+    kubun: '',          // 区分（役員 / PA など）
+    roles: [],
+    patterns: [],
+    mode: 'auto',
+    targetDays: 21,     // 月の目安出勤日数
+    maxConsecutive: 6,  // 連続勤務の上限
+    fixedOffDows: [],   // 固定休の曜日（0=日）
+    active: true,
+    note: '',
+    ...opts,
+  });
+  return [
+    m('川島裕介',        { kubun: '役員', roles: ['全般'], mode: 'manual', note: '役員。シフトは手入力' }),
+    m('宮平 絹江',       { roles: ['厨房'], patterns: ['G', 'H'], targetDays: 22 }),
+    m('日下 堅人',       { roles: ['厨房'], patterns: ['D', 'H'], targetDays: 22 }),
+    m('山田 麗奈',       { kubun: 'PA', roles: ['厨房'], patterns: ['H', 'D'], targetDays: 20 }),
+    m('山下 創士朗',     { kubun: 'PA', roles: ['厨房'], patterns: ['H'], targetDays: 20 }),
+    m('駒澤 晴信',       { kubun: 'PA', roles: ['厨房'], patterns: ['H', 'D'], targetDays: 20 }),
+    m('石橋 大樹',       { roles: ['フロント'], mode: 'always', targetDays: 21, note: '記号なし運用' }),
+    m('薄田 裕花',       { kubun: 'PA', roles: ['フロント', '清掃'], patterns: ['B'], targetDays: 20 }),
+    m('大山 かんな',     { kubun: 'PA', roles: ['フロント', '清掃', 'ホール'], patterns: ['B', 'C', 'D', 'H', 'E'], targetDays: 20 }),
+    m('EI KAY ZIN HAN',  { roles: ['フロント', '清掃', 'ホール'], patterns: ['H', 'B', 'D'], targetDays: 20 }),
+    m('KYI SU THAR',     { roles: ['フロント', '清掃', 'ホール'], patterns: ['H', 'B', 'D', 'E'], targetDays: 20 }),
+    m('ギミレ アスナ',   { roles: ['清掃', 'ホール'], patterns: ['B', 'H', 'D'], targetDays: 20 }),
+    m('サムパツ',        { roles: ['清掃', 'ホール'], patterns: ['B', 'H', 'D'], targetDays: 20 }),
+    m('島村 友子',       { kubun: 'PA', roles: ['清掃'], mode: 'always', targetDays: 21, note: '記号なし運用' }),
+    m('アメリー',        { roles: ['全般'], mode: 'manual' }),
+    m('焼き鳥',          { roles: ['全般'], mode: 'always', targetDays: 19, note: '屋台。シフト表の焼き鳥行' }),
+  ];
+}
+
+// 必要人員ルール
+//   need = min(base + floor(客室数 / perRooms), max)
+//   perRooms = 0 なら客室数に連動しない
+// 既定値は R8 7月・8月の実績（G1 / D1〜2 / H3〜5 / B1〜3、1日あたり7〜10名）に合わせています。
+function defaultSlotRules() {
+  return [
+    { id: 's1', label: '朝食・清掃',  pattern: 'H', roles: ['厨房', '清掃', 'ホール', 'フロント'], base: 3, perRooms: 20, max: 5, enabled: true },
+    { id: 's2', label: '厨房・昼',    pattern: 'G', roles: ['厨房'],                             base: 1, perRooms: 0,  max: 1, enabled: true, optional: true },
+    { id: 's3', label: '厨房・夕',    pattern: 'D', roles: ['厨房'],                             base: 1, perRooms: 24, max: 2, enabled: true },
+    { id: 's4', label: 'フロント・日中', pattern: 'B', roles: ['フロント', '清掃', 'ホール'],       base: 2, perRooms: 24, max: 3, enabled: true },
+  ];
+}
+
+function defaultOptions() {
+  return {
+    defaultRooms: 14,      // 客室数が未入力の日に使う既定値（全28室）
+    maxConsecutive: 6,     // 連勤上限（全体）
+    minOffDays: 8,         // 月の最低休日数
+    iterations: 300,       // 生成の試行回数（多いほど精度が上がる）
+    seed: 1,
+    keepPattern: true,     // 前日と同じパターンを優先して安定させる
+  };
+}
+
+// 必要枠を客室数から展開する
+function expandSlots(rules, rooms) {
+  const slots = [];
+  for (const r of rules) {
+    if (!r.enabled) continue;
+    const extra = r.perRooms > 0 ? Math.floor((rooms || 0) / r.perRooms) : 0;
+    const need = Math.max(0, Math.min(r.base + extra, r.max));
+    for (let i = 0; i < need; i++) {
+      slots.push({ ruleId: r.id, label: r.label, pattern: r.pattern, roles: r.roles, optional: !!r.optional, index: i });
+    }
+  }
+  return slots;
+}
+
+const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+
+function buildDays(year, month, rooms = {}, closedDays = [], defaultRooms = 0) {
+  const n = new Date(year, month, 0).getDate();
+  const days = [];
+  for (let d = 1; d <= n; d++) {
+    const date = new Date(year, month - 1, d);
+    days.push({
+      day: d,
+      dow: date.getDay(),
+      label: `${month}/${d}(${DOW_LABELS[date.getDay()]})`,
+      rooms: rooms[d] === undefined || rooms[d] === '' ? defaultRooms : Number(rooms[d]),
+      closed: closedDays.includes(d),
+    });
+  }
+  return days;
+}
+
+/* ===== js/solver.js ===== */
+// シフト自動生成エンジン
+// 希望休は絶対条件（ハード制約）。連勤上限・出勤日数の目安はソフト制約として最適化します。
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const OFF_SET = ['休', '特', '✖'];
+const isWorkSymbol = (s) => !!s && !OFF_SET.includes(s);
+
+/**
+ * シフト案を生成する。
+ * ctx = { days, members, requests, streaks, rules, options }
+ *   requests: { [memberId]: { [day]: '休' | '特' | '✖' } }
+ *   streaks:  { [memberId]: 連続で取りたい休みの日数 }  例: 「3連休が取りたい」→ 3
+ * 戻り値: { grid, issues, dayStats, memberStats, cost }
+ *   grid: { [memberId]: { [day]: symbol } }
+ */
+function generateShift(ctx) {
+  const run = createRun(ctx);
+  while (run.step(Infinity));
+  return run.best;
+}
+
+/**
+ * 生成を小分けに走らせるための入れ物。
+ * 画面を固まらせずに「今どこまで試したか」「今いくつまで良くなったか」を出せる。
+ * 数字はすべて実際の探索結果で、演出用の待ち時間は入れていない。
+ */
+function createRun(ctx) {
+  const { days, members, requests = {}, streaks = {}, rules, options } = ctx;
+  const active = members.filter((m) => m.active !== false);
+  const total = Math.max(1, options.iterations || 1);
+  let done = 0;
+  let best = null;
+  let improvedAt = 0;
+
+  return {
+    total,
+    get done() { return done; },
+    get best() { return best; },
+    get improvedAt() { return improvedAt; },
+    /** chunk 回ぶん試す。まだ続きがあれば true を返す */
+    step(chunk = 25) {
+      const end = Math.min(total, done + chunk);
+      while (done < end) {
+        const rng = mulberry32((options.seed || 1) * 7919 + done * 104729);
+        const cand = buildOne(days, active, requests, streaks, rules, options, rng);
+        done++;
+        if (!best || cand.cost < best.cost) { best = cand; improvedAt = done; }
+        if (best.cost === 0) { done = total; break; }
+      }
+      return done < total;
+    },
+  };
+}
+
+function buildOne(days, members, requests, streaks, rules, options, rng) {
+  const grid = {};
+  const state = {};
+  for (const m of members) {
+    grid[m.id] = {};
+    state[m.id] = { work: 0, streak: 0, lastPattern: null, switches: 0 };
+  }
+
+  const maxWork = days.length - (options.minOffDays || 0);
+
+  // 1) 確定分を先に置く（希望休・固定休・休館日・常勤・手入力）
+  for (const m of members) {
+    for (const d of days) {
+      const req = requests[m.id] ? requests[m.id][d.day] : null;
+      if (req) { grid[m.id][d.day] = req; continue; }
+      if (m.fixedOffDows && m.fixedOffDows.includes(d.dow)) { grid[m.id][d.day] = '休'; continue; }
+      if (d.closed) { grid[m.id][d.day] = '休'; continue; }
+      if (m.mode === 'always') grid[m.id][d.day] = '';        // 出勤（記号なし）
+      else if (m.mode === 'manual') grid[m.id][d.day] = null;  // 自動では触らない
+    }
+  }
+  // 1.2) 連休の希望（「3連休が取りたい」）を、なるべくヒマな並びに先に置く。
+  //      日にちが決まっていない希望なので、確定分を避けつつこちらで場所を決める。
+  const streakMisses = [];
+  for (const m of members) {
+    if (m.mode === 'manual') continue;
+    const n = streaks[m.id];
+    if (!n || n < 2) continue;
+    if (!placeStreak(m, n, days, grid, rng)) streakMisses.push({ member: m, want: n });
+  }
+
+  // 1.5) 常勤（記号なし）の人にも休みを入れる：連勤上限と最低休日数を満たすよう、
+  //      なるべく客室数の少ない日を休みに充てる
+  for (const m of members) {
+    if (m.mode !== 'always') continue;
+    placeAlwaysOffs(m, days, grid, options, rng);
+    for (const d of days) if (grid[m.id][d.day] === '') state[m.id].work++;
+  }
+
+  // 2) 自動割当
+  const autoMembers = members.filter((m) => m.mode === 'auto');
+  const issues = [];
+  const dayStats = [];
+
+  for (const d of days) {
+    const slots = d.closed ? [] : expandSlots(rules, d.rooms);
+    const assignedToday = new Set();
+    const filled = [];
+
+    // 候補が少ない枠から先に埋める（後半で詰むのを防ぐ）
+    const order = slots
+      .map((s) => ({ slot: s, n: autoMembers.filter((m) => eligible(m, s, d, grid, state, options, maxWork, assignedToday)).length }))
+      .sort((a, b) => a.n - b.n)
+      .map((x) => x.slot);
+
+    for (const slot of order) {
+      const pool = autoMembers.filter((m) => eligible(m, slot, d, grid, state, options, maxWork, assignedToday));
+      if (pool.length === 0) {
+        issues.push({
+          type: 'shortage', day: d.day, label: slot.label, pattern: slot.pattern, roles: slot.roles, optional: slot.optional,
+          message: d.label + ' ' + slot.label + '（' + slot.pattern + '）を埋められる人がいません',
+        });
+        continue;
+      }
+      const scored = pool.map((m) => ({ m, sc: score(m, slot, state[m.id], options, rng) }));
+      scored.sort((a, b) => a.sc - b.sc);
+      const pick = scored[0].m;
+      grid[pick.id][d.day] = slot.pattern;
+      assignedToday.add(pick.id);
+      filled.push({ memberId: pick.id, pattern: slot.pattern, label: slot.label });
+    }
+
+    // 割り当てのつかなかった自動メンバーは休み
+    for (const m of autoMembers) if (grid[m.id][d.day] === undefined) grid[m.id][d.day] = '休';
+
+    // 連勤・出勤日数の更新
+    for (const m of members) {
+      const v = grid[m.id][d.day];
+      const worked = isWorkSymbol(v) || (m.mode === 'always' && v === '');
+      const st = state[m.id];
+      if (worked) {
+        if (m.mode === 'auto') {
+          st.work++;
+          if (st.lastPattern && st.lastPattern !== v) st.switches++;
+          st.lastPattern = v;
+        }
+        st.streak++;
+      } else {
+        st.streak = 0;
+        st.lastPattern = null;
+      }
+    }
+
+    dayStats.push({
+      day: d.day, label: d.label, rooms: d.rooms, closed: d.closed,
+      required: slots.length, filled: filled.length,
+      headcount: members.filter((m) => {
+        const v = grid[m.id][d.day];
+        return isWorkSymbol(v) || (m.mode === 'always' && v === '');
+      }).length,
+      hours: filled.reduce((a, f) => a + (PATTERNS[f.pattern] ? PATTERNS[f.pattern].hours : 0), 0),
+    });
+  }
+
+  // 3) 評価
+  const memberStats = members.map((m) => statsFor(m, days, grid));
+  for (const ms of memberStats) {
+    const m = members.find((x) => x.id === ms.id);
+    if (m.mode !== 'auto') continue;
+    const limit = m.maxConsecutive || options.maxConsecutive;
+    if (ms.maxStreak > limit) {
+      issues.push({ type: 'streak', memberId: m.id, message: m.name + '：' + ms.maxStreak + '連勤（上限' + limit + '）' });
+    }
+    if (Math.abs(ms.work - ms.target) > 3) {
+      issues.push({ type: 'workload', memberId: m.id, message: m.name + '：出勤' + ms.work + '日（目安' + ms.target + '日）' });
+    }
+  }
+
+  for (const miss of streakMisses) {
+    issues.push({ type: 'streakWish', memberId: miss.member.id, message: miss.member.name + '：' + miss.want + '連休の希望を入れられませんでした' });
+  }
+
+  const shortage = issues.filter((i) => i.type === 'shortage' && !i.optional).length;
+  const softShortage = issues.filter((i) => i.type === 'shortage' && i.optional).length;
+  const imbalance = memberStats.reduce((a, s) => {
+    const m = members.find((x) => x.id === s.id);
+    return m.mode === 'auto' ? a + Math.abs(s.work - s.target) : a;
+  }, 0);
+  const switches = Object.values(state).reduce((a, s) => a + s.switches, 0);
+  const cost = shortage * 1000 + softShortage * 20 + imbalance * 10 + streakMisses.length * 50
+    + (options.keepPattern ? switches : 0);
+
+  return { grid, issues, dayStats, memberStats, cost, shortage };
+}
+
+/**
+ * 「N連休が取りたい」を叶える。日にちの指定が無い希望なので、
+ * 予約の少ない並びを選んで N 日続けて休みにする。
+ * すでに N 日連続の休みがあれば何もしない。
+ * @returns {boolean} 置けたら true
+ */
+function placeStreak(m, n, days, grid, rng) {
+  const isOff = (day) => {
+    const v = grid[m.id][day];
+    return v === '休' || v === '特' || v === '✖';
+  };
+  // すでに条件を満たしていれば触らない
+  let run = 0;
+  for (const d of days) {
+    run = isOff(d.day) ? run + 1 : 0;
+    if (run >= n) return true;
+  }
+
+  // 置ける窓を探す。希望休（特・✖）が入っている窓は避ける
+  const windows = [];
+  for (let i = 0; i + n <= days.length; i++) {
+    const win = days.slice(i, i + n);
+    if (win.some((d) => { const v = grid[m.id][d.day]; return v === '特' || v === '✖'; })) continue;
+    // 予約客室数の合計が小さい並びを優先。乱数で散らして試行ごとに違う場所も試す
+    const busy = win.reduce((a, d) => a + (d.rooms || 0), 0) + rng() * 8;
+    windows.push({ i, busy });
+  }
+  if (!windows.length) return false;
+  windows.sort((a, b) => a.busy - b.busy);
+  for (const d of days.slice(windows[0].i, windows[0].i + n)) grid[m.id][d.day] = '休';
+  return true;
+}
+
+/**
+ * 常勤（記号なし）メンバーの休みを配置する。
+ * ① 連勤が上限を超えないよう、区間内で一番ヒマな日を休みにする
+ * ② 目安の出勤日数・最低休日数に届くまで、ヒマな日から休みを足す
+ */
+function placeAlwaysOffs(m, days, grid, options, rng) {
+  const limit = m.maxConsecutive || options.maxConsecutive || 6;
+  const isOff = (day) => grid[m.id][day] !== '';
+  const busyness = (d) => (d.rooms || 0) + rng() * 0.5; // 同じ客室数なら散らす
+
+  // ① 連勤上限を超える区間に休みを差し込む
+  let streak = [];
+  for (const d of days) {
+    if (isOff(d.day)) { streak = []; continue; }
+    streak.push(d);
+    if (streak.length > limit) {
+      const target = streak.slice(1).sort((a, b) => busyness(a) - busyness(b))[0];
+      grid[m.id][target.day] = '休';
+      streak = streak.slice(streak.indexOf(target) + 1);
+    }
+  }
+
+  // ② 休日数が足りなければ、ヒマな日から追加（休みが連続しないよう配慮）
+  const offNeeded = Math.max(options.minOffDays || 0, days.length - (m.targetDays || days.length));
+  const countOff = () => days.filter((d) => isOff(d.day)).length;
+  const pool = days.filter((d) => !isOff(d.day)).sort((a, b) => busyness(a) - busyness(b));
+  for (const d of pool) {
+    if (countOff() >= offNeeded) break;
+    const prevOff = isOff(d.day - 1);
+    const nextOff = isOff(d.day + 1);
+    if (prevOff || nextOff) continue;
+    grid[m.id][d.day] = '休';
+  }
+  for (const d of pool) {
+    if (countOff() >= offNeeded) break;
+    if (!isOff(d.day)) grid[m.id][d.day] = '休';
+  }
+}
+
+/** 続けて休めている日数の最長 */
+function longestOffRun(m, days, grid) {
+  let run = 0, max = 0;
+  for (const d of days) {
+    const v = grid[m.id] ? grid[m.id][d.day] : undefined;
+    const off = v === '休' || v === '特' || v === '✖';
+    run = off ? run + 1 : 0;
+    if (run > max) max = run;
+  }
+  return max;
+}
+
+function statsFor(m, days, grid) {
+  let work = 0, maxStreak = 0, cur = 0;
+  for (const d of days) {
+    const v = grid[m.id] ? grid[m.id][d.day] : undefined;
+    const worked = isWorkSymbol(v) || (m.mode === 'always' && v === '');
+    if (worked) { work++; cur++; if (cur > maxStreak) maxStreak = cur; }
+    else cur = 0;
+  }
+  return { id: m.id, name: m.name, work, off: days.length - work, maxStreak, target: m.targetDays };
+}
+
+function eligible(m, slot, d, grid, state, options, maxWork, assignedToday) {
+  if (assignedToday.has(m.id)) return false;
+  const cur = grid[m.id][d.day];
+  if (cur !== undefined && cur !== null) return false;   // 希望休・固定休などで確定済み
+  if (!m.patterns || !m.patterns.includes(slot.pattern)) return false;
+  if (!slot.roles.some((r) => (m.roles || []).includes(r) || (m.roles || []).includes('全般'))) return false;
+  const st = state[m.id];
+  if (st.streak >= (m.maxConsecutive || options.maxConsecutive)) return false;
+  const cap = Math.min(maxWork, (m.targetDays === undefined ? 99 : m.targetDays) + 2);
+  if (st.work >= cap) return false;
+  return true;
+}
+
+function score(m, slot, st, options, rng) {
+  let s = (st.work / Math.max(1, m.targetDays || 1)) * 100; // 出勤の少ない人を優先
+  if (options.keepPattern && st.lastPattern === slot.pattern) s -= 15; // 前日と同じパターンなら安定
+  s += st.streak * 6;   // 連勤が続いている人は後回し
+  s += rng() * 10;      // 同点をばらす
+  return s;
+}
+
+/** 手修正後も含めた検証。UI から呼んで常に最新の警告を出す。 */
+function validate(ctx, grid) {
+  const { days, members, requests = {}, streaks = {}, rules, options } = ctx;
+  const active = members.filter((m) => m.active !== false);
+  const issues = [];
+  const dayStats = [];
+
+  for (const d of days) {
+    const slots = d.closed ? [] : expandSlots(rules, d.rooms);
+    const need = {};
+    for (const s of slots) {
+      if (!need[s.ruleId]) need[s.ruleId] = { label: s.label, pattern: s.pattern, roles: s.roles, optional: s.optional, count: 0, have: 0 };
+      need[s.ruleId].count++;
+    }
+    for (const m of active) {
+      const v = grid[m.id] ? grid[m.id][d.day] : undefined;
+      if (!isWorkSymbol(v)) continue;
+      for (const k of Object.keys(need)) {
+        const n = need[k];
+        const roleOk = n.roles.some((r) => (m.roles || []).includes(r) || (m.roles || []).includes('全般'));
+        if (n.pattern === v && n.have < n.count && roleOk) { n.have++; break; }
+      }
+    }
+    let required = 0, filled = 0;
+    for (const k of Object.keys(need)) {
+      required += need[k].count;
+      filled += need[k].have;
+      if (need[k].have < need[k].count) {
+        issues.push({
+          type: 'shortage', day: d.day, label: need[k].label, pattern: need[k].pattern, roles: need[k].roles, optional: need[k].optional,
+          message: d.label + ' ' + need[k].label + '（' + need[k].pattern + '）が ' + (need[k].count - need[k].have) + '名 不足',
+        });
+      }
+    }
+    const headcount = active.filter((m) => {
+      const v = grid[m.id] ? grid[m.id][d.day] : undefined;
+      return isWorkSymbol(v) || (m.mode === 'always' && v === '');
+    }).length;
+    const hours = active.reduce((a, m) => {
+      const v = grid[m.id] ? grid[m.id][d.day] : undefined;
+      return a + (PATTERNS[v] ? PATTERNS[v].hours : 0);
+    }, 0);
+    dayStats.push({ day: d.day, label: d.label, rooms: d.rooms, closed: d.closed, required, filled, headcount, hours });
+  }
+
+  const memberStats = active.map((m) => {
+    const st = statsFor(m, days, grid);
+    for (const d of days) {
+      const req = requests[m.id] ? requests[m.id][d.day] : null;
+      const v = grid[m.id] ? grid[m.id][d.day] : undefined;
+      if (req && v !== req && isWorkSymbol(v)) {
+        issues.push({ type: 'request', memberId: m.id, day: d.day, message: m.name + '：' + d.label + ' は希望休（' + req + '）ですが「' + v + '」が入っています' });
+      }
+    }
+    const limit = m.maxConsecutive || options.maxConsecutive;
+    if (st.maxStreak > limit) issues.push({ type: 'streak', memberId: m.id, message: m.name + '：' + st.maxStreak + '連勤（上限' + limit + '）' });
+    if (m.mode === 'auto' && Math.abs(st.work - st.target) > 3) {
+      issues.push({ type: 'workload', memberId: m.id, message: m.name + '：出勤' + st.work + '日（目安' + st.target + '日）' });
+    }
+    if (m.mode !== 'manual' && st.off < (options.minOffDays || 0)) {
+      issues.push({ type: 'off', memberId: m.id, message: m.name + '：休み' + st.off + '日（最低' + options.minOffDays + '日）' });
+    }
+    // 連休の希望（「3連休が取りたい」）が叶っているか
+    const want = streaks[m.id];
+    if (want >= 2 && m.mode !== 'manual' && longestOffRun(m, days, grid) < want) {
+      issues.push({ type: 'streakWish', memberId: m.id, message: m.name + '：' + want + '連休の希望が入っていません（今は最長' + longestOffRun(m, days, grid) + '日）' });
+    }
+    return st;
+  });
+
+  return { issues, dayStats, memberStats };
+}
+
+/** 不足枠を埋められる候補者（ソフト制約は無視して、希望休だけは守る） */
+function candidatesFor(ctx, grid, day, pattern, roles) {
+  const { members } = ctx;
+  return members.filter((m) => {
+    if (m.active === false || m.mode === 'manual') return false;
+    const v = grid[m.id] ? grid[m.id][day] : undefined;
+    if (isWorkSymbol(v)) return false;                       // その日すでに勤務
+    if (v === '特' || v === '✖') return false;               // 希望休は動かさない
+    if (ctx.requests && ctx.requests[m.id] && ctx.requests[m.id][day]) return false;
+    if (!(m.patterns || []).includes(pattern)) return false;
+    return roles.some((r) => (m.roles || []).includes(r) || (m.roles || []).includes('全般'));
+  });
+}
+
+/* ===== js/importers.js ===== */
+// Googleフォームの回答CSV／予約客室数の取り込み
+
+/** RFC4180 準拠のかんたんCSVパーサ（引用符・改行込みセル・BOM対応） */
+function parseCSV(text) {
+  const src = text.replace(/^﻿/, '');
+  const rows = [];
+  let row = [], cell = '', quoted = false;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (quoted) {
+      if (c === '"') {
+        if (src[i + 1] === '"') { cell += '"'; i++; }
+        else quoted = false;
+      } else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\r') { /* skip */ }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter((r) => r.some((v) => String(v).trim() !== ''));
+}
+
+/** 全角→半角、空白除去。氏名の突き合わせ用 */
+function normalizeName(s) {
+  return String(s || '')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[\s　・,、]/g, '')
+    .toLowerCase();
+}
+
+const NAME_HINTS = ['名前', '氏名', 'お名前', 'name', 'スタッフ'];
+const DAY_HINTS = ['希望休', '休み', '休日', '休暇', '公休', 'off', '日にち', '日程'];
+const TYPE_HINTS = ['種別', '区分', '種類'];
+
+function guessColumns(headers) {
+  const h = headers.map((x) => String(x || '').toLowerCase());
+  const findIdx = (hints) => h.findIndex((x) => hints.some((k) => x.includes(k.toLowerCase())));
+  const nameCol = findIdx(NAME_HINTS);
+  const dayCols = h.map((x, i) => (DAY_HINTS.some((k) => x.includes(k.toLowerCase())) ? i : -1)).filter((i) => i >= 0);
+  return { nameCol, dayCols, typeCol: findIdx(TYPE_HINTS) };
+}
+
+/** 全角の数字・記号を半角に直す（９月３日 → 9月3日） */
+function toHalfWidth(value) {
+  return String(value || '')
+    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/／/g, '/').replace(/：/g, ':').replace(/，/g, ',')
+    .replace(/[⓪①②③④⑤⑥⑦⑧⑨]/g, (c) => String('⓪①②③④⑤⑥⑦⑧⑨'.indexOf(c)))
+    .replace(/⑩/g, '10').replace(/⑪/g, '11').replace(/⑫/g, '12').replace(/⑬/g, '13').replace(/⑭/g, '14')
+    .replace(/⑮/g, '15').replace(/⑯/g, '16').replace(/⑰/g, '17').replace(/⑱/g, '18').replace(/⑲/g, '19')
+    .replace(/⑳/g, '20');
+}
+
+/** 「休み」「出勤」の言い回し */
+const R_OFF = '(?:休み?|やすみ|お休み|オフ|off)';
+const R_WORK = '(?:出勤|出社|勤務|復帰|入り)';
+
+/**
+ * 「10日まで出勤」「15日以降は休み」のような期間指定を取り出す。
+ * @returns {{ranges: {from, to, why}[], rest: string}} rest は期間指定を取り除いた残り
+ */
+function extractRanges(value, daysInMonth) {
+  let t = toHalfWidth(value);
+  const ranges = [];
+  const eat = (re, fn) => {
+    t = t.replace(re, (...a) => {
+      const r = fn(...a);
+      if (r) ranges.push(r);
+      return ' ';
+    });
+  };
+  const clamp = (n) => Math.max(1, Math.min(daysInMonth, n));
+  const D = '(\\d{1,2})\\s*日?';
+
+  // ① 「3日から7日まで休み」…両端が書かれているもの
+  eat(new RegExp(D + '\\s*(?:から|〜|~|-|ー)\\s*' + D + '\\s*(?:まで|迄)?\\s*(?:は\\s*)?(?:ずっと\\s*)?' + R_OFF, 'g'),
+    (_, a, b) => (Number(a) <= Number(b) ? { from: clamp(Number(a)), to: clamp(Number(b)), why: `${a}日〜${b}日は休み` } : null));
+
+  // ② 「10日まで出勤」→ 11日以降が休み（退社・産休など）
+  eat(new RegExp(D + '\\s*(?:まで|迄)\\s*(?:は\\s*)?' + R_WORK, 'g'),
+    (_, a) => (Number(a) < daysInMonth ? { from: clamp(Number(a) + 1), to: daysInMonth, why: `${a}日まで出勤（それ以降は休み）` } : null));
+
+  // ③ 「15日から出勤」→ 14日までが休み（入社・復帰など）
+  eat(new RegExp(D + '\\s*(?:から|以降|より)\\s*(?:は\\s*)?' + R_WORK, 'g'),
+    (_, a) => (Number(a) > 1 ? { from: 1, to: clamp(Number(a) - 1), why: `${a}日から出勤（それ以前は休み）` } : null));
+
+  // ④ 「20日以降は休み」
+  eat(new RegExp(D + '\\s*(?:から|以降|より)\\s*(?:は\\s*)?(?:ずっと\\s*)?' + R_OFF, 'g'),
+    (_, a) => ({ from: clamp(Number(a)), to: daysInMonth, why: `${a}日以降は休み` }));
+
+  // ⑤ 「10日まで休み」
+  eat(new RegExp(D + '\\s*(?:まで|迄)\\s*(?:は\\s*)?(?:ずっと\\s*)?' + R_OFF, 'g'),
+    (_, a) => ({ from: 1, to: clamp(Number(a)), why: `${a}日まで休み` }));
+
+  return { ranges, rest: t };
+}
+
+/** 期間を日にちの配列に開く */
+function rangeToDays(r) {
+  const out = [];
+  for (let d = r.from; d <= r.to; d++) out.push(d);
+  return out;
+}
+
+/**
+ * 「3連休が取りたい」のような、日にちを決めない連休の希望を取り出す。
+ * @returns {number} 希望する連続休日数（無ければ 0）
+ */
+function extractStreakWish(value) {
+  const t = toHalfWidth(value);
+  let max = 0;
+  for (const m of t.matchAll(/(\d{1,2})\s*(?:連休|連続\s*(?:で)?\s*(?:の)?\s*休|日\s*連続\s*(?:で)?\s*休)/g)) {
+    const n = Number(m[1]);
+    if (n >= 2 && n <= 14) max = Math.max(max, n);
+  }
+  return max;
+}
+
+/**
+ * セルの文字列から日にちを取り出す。
+ * "3, 8, 15" / "3日 8日" / "9/3" / "2026/09/03" / "3(木)" / "3〜5" いずれも可
+ */
+function extractDays(value, month, daysInMonth) {
+  const found = new Set();
+  const add = (n) => { if (n >= 1 && n <= daysInMonth) found.add(n); };
+
+  // ① 全角・丸数字を半角に直す（９月３日 → 9月3日 / ⑩日 → 10日）
+  const half = toHalfWidth(value);
+
+  // ② 日にちではない数え方を取り除く（3連休・2日間・5名 など）
+  const counted = half.replace(/\d{1,2}\s*(?:連休|連勤|連続|日間|時間|週間|か月|ヶ月|名|人|回|泊|本|件)/g, ' ');
+
+  // ③ 年を取り除く（2026/09/03 → 09/03）
+  const work = counted.replace(/(?:19|20)\d{2}\s*[\/\-年.]\s*/g, '');
+
+  // ④ 「月/日」形式を拾い、拾った部分は後段から外す
+  const md = /(\d{1,2})\s*[\/\-月.]\s*(\d{1,2})\s*日?/g;
+  const spans = [];
+  let m;
+  while ((m = md.exec(work)) !== null) {
+    if (Number(m[1]) === month) add(Number(m[2]));  // 別の月の指定は拾わない
+    spans.push([m.index, m.index + m[0].length]);
+  }
+  let rest = '', pos = 0;
+  for (const [s, e] of spans) { rest += work.slice(pos, s) + ' '; pos = e; }
+  rest += work.slice(pos);
+
+  // ⑤ 範囲指定 3〜5 / 3-5
+  const range = /(\d{1,2})\s*[〜~ー–—]\s*(\d{1,2})/g;
+  while ((m = range.exec(rest)) !== null) {
+    const a = Number(m[1]), b = Number(m[2]);
+    if (a <= b) for (let d = a; d <= b; d++) add(d);
+  }
+  rest = rest.replace(range, ' ');
+
+  // ⑥ 残りの数値
+  for (const n of rest.match(/\d{1,2}/g) || []) add(Number(n));
+  return [...found].sort((a, b) => a - b);
+}
+
+/** 「特」「有給」等の記載があれば特別休暇として扱う */
+function detectSymbol(rowText) {
+  const t = String(rowText || '');
+  if (/特|有給|有休|年休/.test(t)) return '特';
+  if (/不在|来れ|来ら|行けま|行けな|伺えま|出られ|出勤でき|欠勤|不可|×|✖|✕/.test(t)) return '✖';
+  return '休';
+}
+
+/**
+ * フォーム回答CSVを requests 形式に変換する。
+ * @returns {{requests, matched, unmatched, preview}}
+ */
+function importFormCsv(text, { members, month, daysInMonth, nameCol, dayCols, mapping = {} }) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) return { requests: {}, matched: [], unmatched: [], preview: [], headers: rows[0] || [] };
+  const headers = rows[0];
+  const guess = guessColumns(headers);
+  const nc = nameCol === undefined || nameCol < 0 ? guess.nameCol : nameCol;
+  const dc = dayCols && dayCols.length ? dayCols : guess.dayCols;
+
+  const byName = new Map();
+  for (const m of members) byName.set(normalizeName(m.name), m);
+
+  const requests = {};
+  const matched = [];
+  const unmatched = [];
+  const preview = [];
+
+  for (const r of rows.slice(1)) {
+    const rawName = nc >= 0 ? r[nc] : '';
+    const key = normalizeName(rawName);
+    const member = byName.get(key) || (mapping[rawName] ? members.find((m) => m.id === mapping[rawName]) : null);
+    const cellText = dc.map((i) => r[i] || '').join(' ');
+    const days = extractDays(cellText, month, daysInMonth);
+    // 「特」「有給」などは備考欄に書かれることが多いので、行全体から判定する
+    const sym = detectSymbol(r.filter((_, i) => i !== nc).join(' '));
+
+    if (!member) {
+      if (String(rawName).trim()) unmatched.push({ name: rawName, days, sym });
+      continue;
+    }
+    requests[member.id] = requests[member.id] || {};
+    // 同じ人が複数回出したときは、後の回答が上書き
+    for (const d of days) requests[member.id][d] = sym;
+    matched.push({ member, days, sym });
+    preview.push({ name: member.name, days, sym });
+  }
+  return { requests, matched, unmatched, preview, headers };
+}
+
+/**
+ * 予約客室数の貼り付けを取り込む。
+ * 「1日目から順に並んだ数値」（タブ/カンマ/改行/スペース区切り）と
+ * 「3\t12」形式（日にち→客室数）の両方に対応。
+ */
+function parseRoomsInput(text, daysInMonth) {
+  const lines = String(text || '').trim().split(/\r?\n/).filter((l) => l.trim() !== '');
+  const rooms = {};
+  const pairLike = lines.length > 1 && lines.every((l) => /^\s*\d{1,2}\s*[\t,: ]\s*\d{1,3}\s*$/.test(l));
+  if (pairLike) {
+    for (const l of lines) {
+      const [d, v] = l.trim().split(/[\t,: ]+/).map(Number);
+      if (d >= 1 && d <= daysInMonth) rooms[d] = v;
+    }
+    return rooms;
+  }
+  const nums = String(text).split(/[\s,\t]+/).map((s) => s.trim()).filter((s) => s !== '' && /^\d+$/.test(s)).map(Number);
+  nums.slice(0, daysInMonth).forEach((v, i) => { rooms[i + 1] = v; });
+  return rooms;
+}
+
+/** シフト表（スプレッドシート）に貼り付けるTSVを作る */
+function toTSV(members, days, grid, { header = true } = {}) {
+  const lines = [];
+  if (header) {
+    lines.push(['区分', '名前', '担当', '出勤日数', ...days.map((d) => d.day)].join('\t'));
+  }
+  for (const m of members) {
+    if (m.active === false) continue;
+    const cells = days.map((d) => {
+      const v = grid[m.id] ? grid[m.id][d.day] : '';
+      return v === null || v === undefined ? '' : v;
+    });
+    const work = cells.filter((v, i) => v !== '休' && v !== '特' && v !== '✖' && !(m.mode === 'manual' && v === '')).length;
+    lines.push([m.kubun || '', m.name, (m.roles || []).join('/'), work, ...cells].join('\t'));
+  }
+  return lines.join('\n');
+}
+
+/* ===== メッセージ（LINE・チャット）からの取り込み ===== */
+
+/** LINEの日付区切り行（2026/09/03(水) など、日付だけの行） */
+const DATE_ONLY_LINE = /^\s*(?:(?:19|20)\d{2}\s*[\/\-年.]\s*)?\d{1,2}\s*[\/\-月.]\s*\d{1,2}\s*日?\s*(?:[(（][日月火水木金土][)）])?\s*$/;
+
+/**
+ * 日にちと紛らわしいものを消す。
+ *  - 送信時刻（10:23 / 9:01:05）… 10日・23日と誤読されるため
+ *  - 既読・スタンプ・画像などの定型語
+ */
+function stripMessageNoise(line) {
+  return toHalfWidth(line)
+    .replace(/\d{1,2}\s*:\s*\d{2}(?:\s*:\s*\d{2})?/g, ' ')
+    .replace(/\[?(?:写真|画像|スタンプ|動画|ファイル|既読|通話時間)\]?/g, ' ')
+    .replace(/[\t]+/g, ' ');
+}
+
+/** 休みの希望らしい言い回し */
+const OFF_WORDS = /休|やすみ|ヤスミ|有給|有休|年休|振休|代休|不在|来れ|来ら|行けま|行けな|伺えま|出られ|欠勤|off/i;
+/** 休みの希望ではなさそうな言い回し */
+const WORK_WORDS = /出勤|出社|勤務|退社|入社|働け|シフト入/;
+
+/**
+ * スタッフ名の照合キーを作る。フルネームに加えて、苗字だけ・名前だけでも当たるようにする。
+ * 「日下」→ 日下 堅人 / 「絹江」→ 宮平 絹江 のように書かれることが多いため。
+ * 同じキーが複数人に当たる場合（同じ苗字が2人など）は ambiguous 印をつけ、勝手に決めない。
+ */
+function memberKeys(members) {
+  const keys = [];
+  for (const m of members) {
+    if (m.active === false) continue;
+    const full = normalizeName(m.name);
+    if (full.length >= 2) keys.push({ member: m, key: full, kind: 'full' });
+    const parts = String(m.name).split(/[\s　・,、]+/).filter(Boolean);
+    if (parts.length > 1) {
+      for (const p of parts) {
+        const k = normalizeName(p);
+        if (k.length >= 2 && k !== full) keys.push({ member: m, key: k, kind: 'part' });
+      }
+    }
+  }
+  // 同じキーに何人が当たるかを数える
+  const owners = new Map();
+  for (const k of keys) {
+    if (!owners.has(k.key)) owners.set(k.key, new Set());
+    owners.get(k.key).add(k.member.id);
+  }
+  for (const k of keys) k.ambiguous = owners.get(k.key).size > 1;
+  return keys.sort((a, b) => b.key.length - a.key.length);  // 長いキーから先に照合
+}
+
+/**
+ * 1行から発言者を割り出す。
+ * 実際のメッセージは「名前 本文」の形が多いので、行頭の一致を優先する。
+ * @returns {{member}|{ambiguous:true, key, members}|null}
+ */
+function findSpeaker(lineKey, keys) {
+  if (!lineKey) return null;
+  const head = keys.filter((x) => lineKey.startsWith(x.key));
+  const pick = head.length
+    ? head
+    : keys.filter((x) => x.kind === 'full' && lineKey.includes(x.key));  // 行の途中はフルネームのみ
+  if (!pick.length) return null;
+  const best = pick[0];                                     // キーの長い順に並んでいる
+  const tie = pick.filter((x) => x.key === best.key);
+  if (best.ambiguous || tie.length > 1) {
+    return { ambiguous: true, key: best.key, members: [...new Map(tie.map((t) => [t.member.id, t.member])).values()] };
+  }
+  return { member: best.member };
+}
+
+/**
+ * メッセージを貼り付けて希望休を取り込む。
+ * 名前が出てきた行から、次の名前が出てくるまでを、その人の発言とみなす。
+ * 苗字だけ・名前だけでも照合する。判断がつかない分は取り込まず、画面側で選んでもらう。
+ *
+ * @returns {{requests, streaks, matched, needsCheck, ambiguous, unassigned, preview}}
+ */
+function importMessages(text, { members, month, daysInMonth }) {
+  const keys = memberKeys(members);
+
+  const blocks = [];      // { member, lines } … 発言者が分かった分
+  const ambiguousBlocks = [];  // { key, members, lines } … 誰か絞れない分
+  const orphan = [];      // 名前が出てこない分
+  let cur = null;
+
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    if (DATE_ONLY_LINE.test(raw)) { continue; }   // 日付区切りは読み飛ばす
+    const line = stripMessageNoise(raw);
+    if (!line.trim()) continue;
+    const hit = findSpeaker(normalizeName(line), keys);
+    if (hit && hit.ambiguous) {
+      cur = { ambiguous: true, key: hit.key, members: hit.members, lines: [line] };
+      ambiguousBlocks.push(cur);
+    } else if (hit) {
+      cur = { member: hit.member, lines: [line] };
+      blocks.push(cur);
+    } else if (cur) {
+      cur.lines.push(line);
+    } else {
+      orphan.push(line);
+    }
+  }
+
+  /**
+   * 本文から「何日休みたいか」を読み解く。
+   * 期間指定（10日まで出勤 など）→ 日にちの列挙 → 連休希望 の順に見る。
+   */
+  const readBody = (body) => {
+    const { ranges, rest } = extractRanges(body, daysInMonth);
+    const fromRanges = ranges.flatMap(rangeToDays);
+    const fromList = extractDays(rest, month, daysInMonth);
+    const days = [...new Set([...fromRanges, ...fromList])].sort((a, b) => a - b);
+    return { days, ranges, streak: extractStreakWish(body), sym: detectSymbol(body) };
+  };
+
+  // 同じ人の複数発言をまとめる
+  const byMember = new Map();
+  for (const b of blocks) {
+    const prev = byMember.get(b.member.id);
+    if (prev) prev.lines.push(...b.lines);
+    else byMember.set(b.member.id, { member: b.member, lines: [...b.lines] });
+  }
+
+  const requests = {};
+  const streaks = {};
+  const matched = [];
+  const needsCheck = [];
+  const preview = [];
+  for (const { member, lines } of byMember.values()) {
+    const body = lines.join(' ').trim();
+    const { days, ranges, streak, sym } = readBody(body);
+
+    // 「3連休が取りたい」… 日にちは決めず、シフト生成時に連休を作る
+    if (streak) streaks[member.id] = Math.max(streaks[member.id] || 0, streak);
+
+    if (!days.length) {
+      if (streak) {
+        matched.push({ member, days: [], sym, streak, text: body });
+        preview.push({ name: member.name, days: [], sym, streak });
+      } else if (OFF_WORDS.test(body)) {
+        needsCheck.push({ member, days: [], sym, text: body, reason: '日にちを読み取れませんでした' });
+      }
+      continue;
+    }
+
+    // 期間として読めていれば確かなので、そのまま取り込む。
+    // 期間でもなく「出勤」の話に見えるものだけ、確認に回す。
+    const looksWork = !ranges.length && WORK_WORDS.test(body) && !OFF_WORDS.test(body);
+    if (looksWork) {
+      needsCheck.push({ member, days, sym, text: body, reason: '休みの希望ではないかもしれません' });
+      continue;
+    }
+    requests[member.id] = requests[member.id] || {};
+    for (const d of days) requests[member.id][d] = sym;
+    matched.push({ member, days, sym, streak, ranges, text: body });
+    preview.push({ name: member.name, days, sym, streak });
+  }
+
+  // 誰か絞れなかった分
+  const ambiguous = [];
+  for (const b of ambiguousBlocks) {
+    const body = b.lines.join(' ').trim();
+    const { days, streak, sym } = readBody(body);
+    if (!days.length && !streak) continue;
+    ambiguous.push({ key: b.key, members: b.members, days, streak, sym, text: body });
+  }
+
+  // 名前が1つも見つからなかったときは、全文をまとめて返す（画面側で人を選ぶ）
+  const orphanText = orphan.join(' ').trim();
+  const orphanRead = orphanText ? readBody(orphanText) : { days: [], streak: 0, sym: '休' };
+  const unassigned = (orphanRead.days.length || orphanRead.streak)
+    ? { days: orphanRead.days, streak: orphanRead.streak, sym: orphanRead.sym, text: orphanText }
+    : null;
+
+  return { requests, streaks, matched, needsCheck, ambiguous, unassigned, preview };
+}
+
+/* ===== js/app.js ===== */
+// 画面まわり。手順1「希望を集める」→ 手順2「組む」→ 手順3「確認して仕上げる」の3段構成。
+
+
+
+const STORE_KEY = 'kanaloa-shift-planner-v1';
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+/* ---------------- 状態 ---------------- */
+let state = load();
+let step = 1;
+let view = 'sheet';
+let tlDay = null;
+
+function freshState() {
+  const now = new Date();
+  return {
+    year: now.getFullYear(),
+    month: now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2, // 翌月を既定に
+    members: defaultMembers(),
+    rules: defaultSlotRules(),
+    options: defaultOptions(),
+    months: {},
+  };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return freshState();
+    const s = JSON.parse(raw);
+    return { ...freshState(), ...s, options: { ...defaultOptions(), ...(s.options || {}) } };
+  } catch (e) {
+    console.warn('保存データを読めませんでした', e);
+    return freshState();
+  }
+}
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const s = $('#saveState');
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      s.textContent = '保存 ' + new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      s.textContent = 'この画面では保存できません';
+    }
+  }, 200);
+}
+
+const monthKey = () => `${state.year}-${String(state.month).padStart(2, '0')}`;
+function mdata() {
+  const k = monthKey();
+  if (!state.months[k]) state.months[k] = { rooms: {}, closed: [], requests: {}, streaks: {}, noRequest: {}, grid: null };
+  const m = state.months[k];
+  m.rooms = m.rooms || {}; m.closed = m.closed || []; m.requests = m.requests || {};
+  m.streaks = m.streaks || {}; m.noRequest = m.noRequest || {};
+  return m;
+}
+const days = () => buildDays(state.year, state.month, mdata().rooms, mdata().closed, state.options.defaultRooms);
+const activeMembers = () => state.members.filter((m) => m.active !== false);
+const ctx = () => ({
+  days: days(), members: activeMembers(), requests: mdata().requests, streaks: mdata().streaks,
+  rules: state.rules, options: state.options,
+});
+const initials = (n) => String(n).replace(/[\s　]/g, '').slice(0, 2);
+const isToday = (day) => {
+  const t = new Date();
+  return t.getFullYear() === state.year && t.getMonth() + 1 === state.month && t.getDate() === day.day;
+};
+const reqCount = (id) => Object.keys(mdata().requests[id] || {}).length;
+const hasSubmitted = (id) => reqCount(id) > 0 || mdata().streaks[id] > 0 || !!mdata().noRequest[id];
+
+function toast(msg, ms = 2400) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.add('hidden'), ms);
+}
+
+/* ---------------- 手順の切り替え ---------------- */
+function goStep(n) {
+  if (n === 3 && !mdata().grid) { toast('先にシフトを組んでください'); return; }
+  step = n;
+  $('#scCollect').hidden = n !== 1;
+  $('#scRun').hidden = n !== 2;
+  $('#scRes').hidden = n !== 3;
+  $$('#stepper .step').forEach((b) => {
+    const s = Number(b.dataset.s);
+    b.classList.toggle('on', s === n);
+    b.classList.toggle('done', s < n || (s === 1 && n === 3) || (s < 3 && !!mdata().grid && s !== n));
+  });
+  if (n === 1) renderCollect();
+  if (n === 3) renderResult();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+/* ================= 手順1：希望を集める ================= */
+function renderCollect() {
+  renderRoster();
+  renderStreakWishes();
+  renderSummary();
+  renderRules();
+  renderRoomsGrid();
+  renderLaunch();
+  if (!$('#advBody').hidden) { renderStaff(); renderRuleTable(); }
+}
+
+function renderRoster() {
+  const host = $('#rosterBody');
+  host.innerHTML = '';
+  const d = days();
+  const members = activeMembers();
+  for (const m of members) {
+    const tr = el('tr');
+
+    const tdP = el('td');
+    const p = el('div', 'person');
+    p.appendChild(el('span', 'av', initials(m.name)));
+    const box = el('div');
+    box.appendChild(el('div', 'n', m.name));
+    box.appendChild(el('div', 'm', [m.kubun, ASSIGN_MODES[m.mode]].filter(Boolean).join(' / ')));
+    p.appendChild(box);
+    tdP.appendChild(p);
+    tr.appendChild(tdP);
+
+    const tdR = el('td');
+    for (const r of (m.roles || [])) tdR.appendChild(el('span', 'tag ' + r, r));
+    tr.appendChild(tdR);
+
+    const tdS = el('td');
+    const done = hasSubmitted(m.id);
+    const st = el('span', 'status ' + (done ? 'done' : 'wait'));
+    st.appendChild(el('span', 'pip'));
+    st.appendChild(el('span', '', done ? '提出済み' : '未提出'));
+    tdS.appendChild(st);
+    if (!done) {
+      const b = el('button', 'btn sm', '希望なし');
+      b.style.marginTop = '4px';
+      b.title = 'この人は今月の希望休なし、として記録します';
+      b.addEventListener('click', (ev) => { ev.stopPropagation(); mdata().noRequest[m.id] = true; save(); renderCollect(); });
+      tdS.appendChild(b);
+    }
+    tr.appendChild(tdS);
+
+    const tdW = el('td');
+    const strip = el('div', 'strip');
+    strip.title = m.name + 'の希望休を開く';
+    const reqs = mdata().requests[m.id] || {};
+    for (const day of d) {
+      const c = el('div', 'dc' + (day.dow === 0 ? ' sun' : day.dow === 6 ? ' sat' : ''));
+      const sym = reqs[day.day];
+      if (sym === '休') c.classList.add('off');
+      else if (sym === '特') c.classList.add('special');
+      else if (sym === '✖') c.classList.add('ng');
+      c.appendChild(el('div', 'dt', String(day.day)));
+      if (sym) c.appendChild(el('div', '', sym));
+      strip.appendChild(c);
+    }
+    strip.addEventListener('click', () => openCalendar(m));
+    tdW.appendChild(strip);
+    const n = reqCount(m.id);
+    const wish = mdata().streaks[m.id];
+    tdW.appendChild(el('div', 'stripnote', [n ? `${n}日` : '希望なし', wish ? `${wish}連休の希望` : ''].filter(Boolean).join(' ／ ')));
+    tr.appendChild(tdW);
+
+    tr.addEventListener('click', () => openCalendar(m));
+    host.appendChild(tr);
+  }
+  const submitted = members.filter((m) => hasSubmitted(m.id)).length;
+  $('#collectSub').textContent = `${state.month}月 ／ ${submitted}/${members.length}名が提出`;
+}
+
+/** 希望休カレンダー */
+function openCalendar(m) {
+  const d = days();
+  const modal = $('#modal');
+  modal.innerHTML = '';
+  const mh = el('div', 'mh');
+  const t = el('div');
+  t.appendChild(el('h2', '', m.name));
+  t.appendChild(el('div', 'sub', `${state.year}年${state.month}月　クリックで 休 → 特 → ✖ → なし`));
+  mh.appendChild(t);
+  const x = el('button', 'btn sm x', '閉じる');
+  x.addEventListener('click', closeModal);
+  mh.appendChild(x);
+  modal.appendChild(mh);
+
+  const body = el('div', 'pad');
+  const cal = el('div', 'cal');
+  ['日', '月', '火', '水', '木', '金', '土'].forEach((w, i) => {
+    cal.appendChild(el('div', 'ch' + (i === 0 ? ' sun' : i === 6 ? ' sat' : ''), w));
+  });
+  for (let i = 0; i < d[0].dow; i++) cal.appendChild(el('div', 'cd empty'));
+  const CYCLE = ['休', '特', '✖', null];
+  for (const day of d) {
+    const cur = (mdata().requests[m.id] || {})[day.day] || null;
+    const cd = el('div', 'cd' + (cur === '休' ? ' off' : cur === '特' ? ' special' : cur === '✖' ? ' ng' : ''));
+    cd.appendChild(el('div', 'dn', String(day.day)));
+    cd.appendChild(el('div', 'sy', cur || ''));
+    cd.addEventListener('click', () => {
+      const r = mdata().requests;
+      r[m.id] = r[m.id] || {};
+      const next = CYCLE[(CYCLE.indexOf(cur) + 1) % CYCLE.length];
+      if (next === null) delete r[m.id][day.day]; else r[m.id][day.day] = next;
+      save();
+      openCalendar(m);
+      renderRoster(); renderSummary(); renderLaunch();
+    });
+    cal.appendChild(cd);
+  }
+  body.appendChild(cal);
+
+  const foot = el('div', 'row');
+  const wish = el('label', 'inline');
+  wish.appendChild(el('span', '', '連休の希望'));
+  const num = el('input');
+  num.type = 'number'; num.min = '0'; num.max = '14'; num.className = 'num-input';
+  num.value = mdata().streaks[m.id] || '';
+  num.addEventListener('change', () => {
+    const v = Number(num.value);
+    if (v >= 2) mdata().streaks[m.id] = v; else delete mdata().streaks[m.id];
+    save(); renderRoster(); renderStreakWishes(); renderSummary();
+  });
+  wish.appendChild(num);
+  wish.appendChild(el('span', '', '連休（0で取り消し）'));
+  foot.appendChild(wish);
+  const clr = el('button', 'btn sm', 'この人の希望休を全部消す');
+  clr.addEventListener('click', () => {
+    delete mdata().requests[m.id];
+    delete mdata().streaks[m.id];
+    save(); openCalendar(m); renderCollect();
+  });
+  foot.appendChild(clr);
+  body.appendChild(foot);
+  modal.appendChild(body);
+  $('#mask').classList.add('show');
+}
+function closeModal() { $('#mask').classList.remove('show'); }
+$('#mask').addEventListener('click', (e) => { if (e.target === $('#mask')) closeModal(); });
+
+function renderStreakWishes() {
+  const host = $('#streakWishes');
+  host.innerHTML = '';
+  const entries = Object.entries(mdata().streaks).filter(([, n]) => n >= 2);
+  if (!entries.length) { host.hidden = true; return; }
+  host.hidden = false;
+  host.appendChild(el('div', 'rulehead', '連休の希望（日にちは組むときに決めます）'));
+  const wrap = el('div', 'legend');
+  for (const [mid, n] of entries) {
+    const m = state.members.find((x) => x.id === mid);
+    if (!m) continue;
+    const chip = el('span', 'legend-item');
+    chip.appendChild(el('b', 'p-H', String(n)));
+    chip.appendChild(el('span', '', `${m.name}：${n}連休`));
+    const b = el('button', 'btn sm', '取消');
+    b.addEventListener('click', () => { delete mdata().streaks[mid]; save(); renderCollect(); });
+    chip.appendChild(b);
+    wrap.appendChild(chip);
+  }
+  host.appendChild(wrap);
+}
+
+function renderSummary() {
+  const d = days();
+  const members = activeMembers();
+  const submitted = members.filter((m) => hasSubmitted(m.id)).length;
+  const need = d.reduce((a, day) => a + (day.closed ? 0 : expandSlots(state.rules, day.rooms).length), 0);
+  const wish = members.reduce((a, m) => a + reqCount(m.id), 0);
+  const streak = Object.values(mdata().streaks).filter((n) => n >= 2).length;
+
+  const pct = members.length ? submitted / members.length : 0;
+  $('#ringArc').setAttribute('stroke-dashoffset', String(219.9 * (1 - pct)));
+  $('#ringNum').textContent = `${submitted}/${members.length}`;
+  $('#sNeed').innerHTML = `${need}<em>枠</em>`;
+  $('#sWish').innerHTML = `${wish}<em>日</em>`;
+  $('#sStreak').innerHTML = `${streak}<em>件</em>`;
+  $('#stepSub1').textContent = `${state.year}年${state.month}月 ／ ${submitted}/${members.length}名`;
+}
+
+function renderRules() {
+  const o = state.options;
+  const hard = [
+    '本人が出した希望休（休・特・✖）の日には入れない',
+    `連勤は${o.maxConsecutive}日まで`,
+    `月の休みは最低${o.minOffDays}日`,
+    '対応できるパターン・担当の仕事だけを割り当てる',
+    '1人1日1枠まで／休館日は全員休み',
+  ];
+  const soft = [
+    '各枠の必要人数を満たす（予約客室数に連動）',
+    '出勤日数を、一人ひとりの目安に近づける',
+    '連休の希望を、予約の少ない並びに入れる',
+    o.keepPattern ? '前日と同じパターンを優先して、生活リズムを崩さない' : '（前日と同じパターンの優先は切ってあります）',
+  ];
+  const fill = (host, list, cls) => {
+    host.innerHTML = '';
+    for (const r of list) {
+      const row = el('div', 'rule ' + cls);
+      row.appendChild(el('span', 'ic'));
+      row.appendChild(el('div', '', r));
+      host.appendChild(row);
+    }
+  };
+  fill($('#ruleHard'), hard, 'hard');
+  fill($('#ruleSoft'), soft, 'soft');
+}
+
+function renderLaunch() {
+  const members = activeMembers();
+  const submitted = members.filter((m) => hasSubmitted(m.id)).length;
+  const grid = mdata().grid;
+  $('#launchTitle').textContent = grid
+    ? `${state.year}年${state.month}月のシフト案はできています`
+    : `${state.year}年${state.month}月のシフトを組みます`;
+  $('#launchNote').textContent = submitted < members.length
+    ? `未提出が${members.length - submitted}名います。このまま組むこともできます（希望なしとして扱います）。`
+    : '全員の希望休がそろっています。';
+  $('#btnRun').textContent = grid ? '組み直す' : 'シフトを組む';
+}
+
+/* ---------------- 取り込み ---------------- */
+let importMode = 'msg';
+function setImportMode(mode) {
+  importMode = mode;
+  $$('#importMode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  $('#hintCsv').hidden = mode !== 'csv';
+  $('#hintMsg').hidden = mode !== 'msg';
+  $('#rowCsv').hidden = mode !== 'csv';
+  $('#rowMsg').hidden = mode !== 'msg';
+  $('#csvText').placeholder = mode === 'csv' ? 'ここにCSVを貼り付け' : 'ここにメッセージを貼り付け';
+  $('#csvMapping').hidden = mode !== 'csv';
+  $('#csvResult').innerHTML = '';
+  if (mode === 'csv') renderCsvMapping();
+}
+
+function renderCsvMapping() {
+  const host = $('#csvMapping');
+  host.innerHTML = '';
+  if (importMode !== 'csv') return;
+  const text = $('#csvText').value.trim();
+  if (!text) return;
+  const rows = parseCSV(text);
+  if (!rows.length) return;
+  const headers = rows[0];
+  const guess = guessColumns(headers);
+  const mkSelect = (id, label, selected, multiple) => {
+    const w = el('label', 'inline');
+    w.appendChild(el('span', '', label));
+    const s = el('select');
+    s.id = id;
+    if (multiple) s.multiple = true; else s.appendChild(el('option', '', '（自動）'));
+    headers.forEach((h, i) => {
+      const o = el('option', '', `${i + 1}. ${h || '(無題)'}`);
+      o.value = i;
+      if (multiple ? selected.includes(i) : selected === i) o.selected = true;
+      s.appendChild(o);
+    });
+    w.appendChild(s);
+    return w;
+  };
+  host.appendChild(el('span', 'hint', `${rows.length - 1}件の回答を読み込みました。`));
+  host.appendChild(mkSelect('mapName', '名前の列', guess.nameCol, false));
+  host.appendChild(mkSelect('mapDays', '希望休の列', guess.dayCols, true));
+}
+
+function applyRequest(memberId, daysArr, sym) {
+  const rr = mdata().requests;
+  rr[memberId] = rr[memberId] || {};
+  for (const d of daysArr) rr[memberId][d] = sym;
+  save();
+  renderCollect();
+}
+
+/** 自動で決めきれなかった分を並べる */
+function renderCheckList(host, items) {
+  host.appendChild(el('h3', '', `確認が必要 ${items.length}件`));
+  const ul = el('ul', 'check-list');
+  for (const it of items) {
+    const li = el('li');
+    li.appendChild(el('span', 'check-who', it.who));
+    li.appendChild(el('span', 'check-why', it.why));
+    const done = () => { li.classList.add('resolved'); toast('取り込みました'); };
+    if (it.days.length && it.memberId) {
+      const b = el('button', 'btn sm', `${it.days.map((x) => x + '日').join('・')} を取り込む`);
+      b.addEventListener('click', () => { applyRequest(it.memberId, it.days, it.sym); done(); });
+      li.appendChild(b);
+    } else if (it.days.length) {
+      const sel = el('select');
+      sel.appendChild(el('option', '', '― この人に割り当てる ―'));
+      for (const m of (it.candidates || activeMembers())) {
+        const o = el('option', '', m.name);
+        o.value = m.id;
+        sel.appendChild(o);
+      }
+      sel.addEventListener('change', () => { if (sel.value) { applyRequest(sel.value, it.days, it.sym); done(); } });
+      li.appendChild(el('span', '', `${it.days.map((x) => x + '日').join('・')} →`));
+      li.appendChild(sel);
+    } else {
+      li.appendChild(el('span', 'check-why', 'カレンダーから直接入れてください'));
+    }
+    if (it.text) li.appendChild(el('span', 'check-text', it.text));
+    ul.appendChild(li);
+  }
+  host.appendChild(ul);
+}
+
+function doImportMessages() {
+  const text = $('#csvText').value.trim();
+  if (!text) { toast('メッセージを貼り付けてください'); return; }
+  const d = days();
+  const res = importMessages(text, { members: activeMembers(), month: state.month, daysInMonth: d.length });
+  const checks = [
+    ...res.needsCheck.map((n) => ({ who: n.member.name, why: n.reason, text: n.text, days: n.days, sym: n.sym, memberId: n.member.id })),
+    ...res.ambiguous.map((a) => ({
+      who: `「${a.key}」`, why: `${a.members.map((m) => m.name).join(' / ')} のどちらか分かりません`,
+      text: a.text, days: a.days, sym: a.sym, candidates: a.members,
+    })),
+    ...(res.unassigned ? [{ who: '名前なし', why: '誰の希望休か分かりません', text: res.unassigned.text, days: res.unassigned.days, sym: res.unassigned.sym }] : []),
+  ];
+  const host = $('#csvResult');
+  host.innerHTML = '';
+  if (!res.matched.length && !checks.length) {
+    host.appendChild(el('p', 'hint', '日にちを読み取れませんでした。「日下 3日 4日 休み希望」のように、名前（苗字だけでも可）と日にちが入っているか確認してください。'));
+    toast('読み取れませんでした');
+    return;
+  }
+  if ($('#csvReplace').checked) { mdata().requests = {}; mdata().streaks = {}; }
+  const r = mdata().requests;
+  for (const [mid, obj] of Object.entries(res.requests)) r[mid] = { ...(r[mid] || {}), ...obj };
+  Object.assign(mdata().streaks, res.streaks);
+  save();
+
+  host.appendChild(el('h3', '', `取り込み ${res.matched.length}件`));
+  const ul = el('ul', 'ok-list');
+  for (const p of res.matched) {
+    const parts = [];
+    if (p.days.length > 4) parts.push(`${p.days[0]}日〜${p.days[p.days.length - 1]}日の ${p.days.length}日間`);
+    else if (p.days.length) parts.push(p.days.map((x) => x + '日').join('・'));
+    if (p.streak) parts.push(`${p.streak}連休の希望`);
+    ul.appendChild(el('li', '', `${p.member.name}：${parts.join(' ＋ ')}（${p.sym}）`));
+  }
+  host.appendChild(ul);
+  if (checks.length) renderCheckList(host, checks);
+  renderCollect();
+  toast(res.matched.length ? `希望休を${res.matched.length}件取り込みました` : `${checks.length}件は確認が必要です`);
+}
+
+function doImportCsv() {
+  if (importMode === 'msg') { doImportMessages(); return; }
+  const text = $('#csvText').value.trim();
+  if (!text) { toast('CSVを貼り付けてください'); return; }
+  const nameSel = $('#mapName');
+  const daySel = $('#mapDays');
+  const d = days();
+  const res = importFormCsv(text, {
+    members: activeMembers(), month: state.month, daysInMonth: d.length,
+    nameCol: nameSel && nameSel.value !== '' ? Number(nameSel.value) : -1,
+    dayCols: daySel ? [...daySel.selectedOptions].map((o) => Number(o.value)) : [],
+  });
+  if ($('#csvReplace').checked) { mdata().requests = {}; mdata().streaks = {}; }
+  const r = mdata().requests;
+  for (const [mid, obj] of Object.entries(res.requests)) r[mid] = { ...(r[mid] || {}), ...obj };
+  save();
+  const host = $('#csvResult');
+  host.innerHTML = '';
+  host.appendChild(el('h3', '', `取り込み ${res.preview.length}件`));
+  const ul = el('ul', 'ok-list');
+  for (const p of res.preview) ul.appendChild(el('li', '', `${p.name}：${p.days.map((x) => x + '日').join('・') || '指定なし'}（${p.sym}）`));
+  host.appendChild(ul);
+  if (res.unmatched.length) {
+    renderCheckList(host, res.unmatched.map((u) => ({ who: `「${u.name}」`, why: '名簿に一致するスタッフがいません', text: '', days: u.days, sym: u.sym })));
+  }
+  renderCollect();
+  toast(`希望休を${res.preview.length}件取り込みました`);
+}
+
+/* ---------------- 予約客室数 ---------------- */
+function renderRoomsGrid() {
+  const host = $('#roomsGrid');
+  host.innerHTML = '';
+  const d = days();
+  for (const day of d) {
+    const cell = el('div', 'room-cell' + (day.dow === 0 ? ' sun' : day.dow === 6 ? ' sat' : ''));
+    const head = el('div', 'room-day');
+    head.appendChild(el('span', '', String(day.day)));
+    head.appendChild(el('span', 'dw', ' ' + DOW_LABELS[day.dow]));
+    cell.appendChild(head);
+    const inp = el('input');
+    inp.type = 'number'; inp.min = '0'; inp.max = '28';
+    inp.value = mdata().rooms[day.day] === undefined ? '' : mdata().rooms[day.day];
+    inp.placeholder = String(state.options.defaultRooms);
+    inp.addEventListener('change', () => {
+      if (inp.value === '') delete mdata().rooms[day.day];
+      else mdata().rooms[day.day] = Number(inp.value);
+      save();
+      updateRoomNeed(cell, inp.value === '' ? state.options.defaultRooms : Number(inp.value));
+      renderSummary();
+    });
+    cell.appendChild(inp);
+    const cl = el('label', 'inline');
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = mdata().closed.includes(day.day);
+    cb.addEventListener('change', () => {
+      const c = mdata().closed;
+      if (cb.checked) { if (!c.includes(day.day)) c.push(day.day); }
+      else mdata().closed = c.filter((x) => x !== day.day);
+      save(); renderRoomsGrid(); renderSummary();
+    });
+    cl.appendChild(cb);
+    cl.appendChild(el('span', 'room-need', '休館'));
+    cell.appendChild(cl);
+    const need = el('div', 'room-need');
+    cell.appendChild(need);
+    updateRoomNeed(cell, day.rooms);
+    host.appendChild(cell);
+  }
+}
+function updateRoomNeed(cell, rooms) {
+  const n = cell.querySelector('.room-need:last-child');
+  if (n) n.textContent = '必要 ' + expandSlots(state.rules, rooms).length + '名';
+}
+
+/* ---------------- 詳細設定 ---------------- */
+function renderStaff() {
+  const host = $('#staffTable');
+  host.innerHTML = '';
+  const table = el('table', 'form-table');
+  const head = el('tr');
+  ['', '区分', '名前', '担当', '対応パターン', '割当', '目安', '連勤', '固定休', 'メモ'].forEach((h) => head.appendChild(el('th', '', h)));
+  table.appendChild(head);
+  for (const m of state.members) {
+    const tr = el('tr');
+    const act = el('td');
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = m.active !== false;
+    cb.addEventListener('change', () => { m.active = cb.checked; save(); renderCollect(); });
+    act.appendChild(cb);
+    tr.appendChild(act);
+    tr.appendChild(textCell(m, 'kubun', 'text', '区分'));
+    tr.appendChild(textCell(m, 'name', 'text', '名前'));
+
+    const roles = el('td', 'chips');
+    for (const r of ROLES) {
+      const c = el('button', 'chip' + ((m.roles || []).includes(r) ? ' on' : ''), r);
+      c.addEventListener('click', () => {
+        m.roles = (m.roles || []).includes(r) ? m.roles.filter((x) => x !== r) : [...(m.roles || []), r];
+        save(); renderStaff(); renderRoster();
+      });
+      roles.appendChild(c);
+    }
+    tr.appendChild(roles);
+
+    const pats = el('td', 'chips');
+    for (const p of PATTERN_CODES) {
+      const c = el('button', 'chip' + ((m.patterns || []).includes(p) ? ' on' : ''), p);
+      c.title = PATTERNS[p].time;
+      c.addEventListener('click', () => {
+        m.patterns = (m.patterns || []).includes(p) ? m.patterns.filter((x) => x !== p) : [...(m.patterns || []), p];
+        save(); renderStaff();
+      });
+      pats.appendChild(c);
+    }
+    tr.appendChild(pats);
+
+    const mode = el('td');
+    const sel = el('select');
+    for (const [k, label] of Object.entries(ASSIGN_MODES)) {
+      const o = el('option', '', label); o.value = k;
+      if (m.mode === k) o.selected = true;
+      sel.appendChild(o);
+    }
+    sel.addEventListener('change', () => { m.mode = sel.value; save(); renderStaff(); renderRoster(); });
+    mode.appendChild(sel);
+    tr.appendChild(mode);
+
+    tr.appendChild(numCell(m, 'targetDays', 0, 31));
+    tr.appendChild(numCell(m, 'maxConsecutive', 1, 14));
+
+    const dows = el('td', 'chips');
+    for (let i = 0; i < 7; i++) {
+      const c = el('chip' === '' ? 'span' : 'button', 'chip' + ((m.fixedOffDows || []).includes(i) ? ' on' : ''), DOW_LABELS[i]);
+      c.addEventListener('click', () => {
+        m.fixedOffDows = (m.fixedOffDows || []).includes(i) ? m.fixedOffDows.filter((x) => x !== i) : [...(m.fixedOffDows || []), i];
+        save(); renderStaff();
+      });
+      dows.appendChild(c);
+    }
+    tr.appendChild(dows);
+    tr.appendChild(textCell(m, 'note', 'text', 'メモ'));
+    table.appendChild(tr);
+  }
+  host.appendChild(table);
+}
+function textCell(obj, key, type, ph) {
+  const td = el('td');
+  const i = el('input'); i.type = type; i.value = obj[key] || ''; i.placeholder = ph || '';
+  i.addEventListener('change', () => { obj[key] = i.value; save(); renderRoster(); });
+  td.appendChild(i);
+  return td;
+}
+function numCell(obj, key, min, max) {
+  const td = el('td');
+  const i = el('input'); i.type = 'number'; i.className = 'num-input';
+  i.min = min; i.max = max; i.value = obj[key] === undefined ? '' : obj[key];
+  i.addEventListener('change', () => { obj[key] = Number(i.value); save(); });
+  td.appendChild(i);
+  return td;
+}
+
+function renderRuleTable() {
+  const host = $('#rulesTable');
+  host.innerHTML = '';
+  const t = el('table', 'form-table');
+  const h = el('tr');
+  ['', '枠の名前', 'パターン', '対象の担当', '基本', '加算間隔(室)', '上限', '空きでOK'].forEach((x) => h.appendChild(el('th', '', x)));
+  t.appendChild(h);
+  for (const r of state.rules) {
+    const tr = el('tr');
+    const on = el('td');
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.enabled !== false;
+    cb.addEventListener('change', () => { r.enabled = cb.checked; save(); renderRuleTable(); renderSummary(); renderRoomsGrid(); });
+    on.appendChild(cb); tr.appendChild(on);
+    tr.appendChild(textCell(r, 'label', 'text', '枠の名前'));
+    const pt = el('td');
+    const sel = el('select');
+    for (const p of PATTERN_CODES) {
+      const o = el('option', '', `${p}　${PATTERNS[p].time}`); o.value = p;
+      if (r.pattern === p) o.selected = true;
+      sel.appendChild(o);
+    }
+    sel.addEventListener('change', () => { r.pattern = sel.value; save(); renderRuleTable(); });
+    pt.appendChild(sel); tr.appendChild(pt);
+    const rl = el('td', 'chips');
+    for (const role of ROLES) {
+      const c = el('button', 'chip' + ((r.roles || []).includes(role) ? ' on' : ''), role);
+      c.addEventListener('click', () => {
+        r.roles = (r.roles || []).includes(role) ? r.roles.filter((x) => x !== role) : [...(r.roles || []), role];
+        save(); renderRuleTable();
+      });
+      rl.appendChild(c);
+    }
+    tr.appendChild(rl);
+    tr.appendChild(numCell(r, 'base', 0, 10));
+    tr.appendChild(numCell(r, 'perRooms', 0, 28));
+    tr.appendChild(numCell(r, 'max', 0, 10));
+    const opt = el('td');
+    const ob = el('input'); ob.type = 'checkbox'; ob.checked = !!r.optional;
+    ob.addEventListener('change', () => { r.optional = ob.checked; save(); });
+    opt.appendChild(ob); tr.appendChild(opt);
+    t.appendChild(tr);
+  }
+  host.appendChild(t);
+
+  const pv = $('#rulesPreview');
+  pv.innerHTML = '';
+  const t2 = el('table', 'mini');
+  const hr = el('tr');
+  hr.appendChild(el('th', '', '予約客室数'));
+  [0, 4, 8, 12, 16, 20, 24, 28].forEach((n) => hr.appendChild(el('th', '', n + '室')));
+  t2.appendChild(hr);
+  const rr = el('tr');
+  rr.appendChild(el('th', '', '必要人数'));
+  [0, 4, 8, 12, 16, 20, 24, 28].forEach((n) => rr.appendChild(el('td', '', expandSlots(state.rules, n).length + '名')));
+  t2.appendChild(rr);
+  pv.appendChild(t2);
+
+  const ph = $('#patternTable');
+  ph.innerHTML = '';
+  const t3 = el('table', 'mini');
+  const h3 = el('tr');
+  ['記号', '就労時間', '実働', '休憩'].forEach((x) => h3.appendChild(el('th', '', x)));
+  t3.appendChild(h3);
+  for (const code of PATTERN_CODES) {
+    const p = PATTERNS[code];
+    const row = el('tr');
+    row.appendChild(el('th', 'p-' + code, code));
+    row.appendChild(el('td', '', p.time));
+    row.appendChild(el('td', '', p.hours + 'h'));
+    row.appendChild(el('td', '', p.rest + 'h'));
+    t3.appendChild(row);
+  }
+  ph.appendChild(t3);
+}
+
+function bindOptions() {
+  const map = [
+    ['#optMaxConsecutive', 'maxConsecutive'], ['#optMinOff', 'minOffDays'],
+    ['#optIterations', 'iterations'], ['#defaultRooms', 'defaultRooms'],
+  ];
+  for (const [sel, key] of map) {
+    const e = $(sel);
+    e.value = state.options[key];
+    e.addEventListener('change', () => { state.options[key] = Number(e.value); save(); renderCollect(); });
+  }
+  const kp = $('#optKeepPattern');
+  kp.checked = !!state.options.keepPattern;
+  kp.addEventListener('change', () => { state.options.keepPattern = kp.checked; save(); renderRules(); });
+}
+
+/* ================= 手順2：組む ================= */
+let runner = null;
+let runRaf = null;
+
+function startRun(newSeed) {
+  if (newSeed) state.options.seed = Math.floor(Math.random() * 1e6) + 1;
+  goStep(2);
+  const c = ctx();
+  runner = createRun(c);
+  const log = $('#runLog');
+  log.innerHTML = '';
+  $('#runPulse').hidden = false;
+  $('#runTitle').textContent = '配置を探しています';
+  $('#btnRunStop').hidden = false;
+  const t0 = performance.now();
+  let lastCost = Infinity;
+
+  const paint = () => {
+    const b = runner.best;
+    const pct = runner.done / runner.total;
+    $('#progBar').style.width = (pct * 100).toFixed(1) + '%';
+    $('#progLeft').textContent = `${runner.done} / ${runner.total} 回`;
+    $('#progRight').textContent = `${Math.round(performance.now() - t0)} ms`;
+    $('#mTried').textContent = runner.done.toLocaleString('ja-JP');
+    if (!b) return;
+    const short = b.issues.filter((i) => i.type === 'shortage' && !i.optional).length;
+    const need = b.dayStats.reduce((a, x) => a + x.required, 0);
+    const got = b.dayStats.reduce((a, x) => a + x.filled, 0);
+    $('#mShort').textContent = short + '枠';
+    $('#mFill').textContent = need ? Math.round((got / need) * 100) + '%' : '—';
+    $('#mHours').textContent = b.dayStats.reduce((a, x) => a + x.hours, 0) + 'h';
+    $('#mCost').textContent = b.cost.toLocaleString('ja-JP');
+    if (b.cost < lastCost) {
+      lastCost = b.cost;
+      const row = el('div', 'lrow');
+      row.appendChild(el('span', 'it', String(runner.improvedAt).padStart(4, ' ') + '回目'));
+      row.appendChild(el('span', 'msg good', `評価値 ${b.cost}`));
+      row.appendChild(el('span', 'msg', `不足${short}枠／充足${need ? Math.round((got / need) * 100) : 0}%`));
+      log.insertBefore(row, log.firstChild);
+    }
+  };
+
+  // requestAnimationFrame はタブが裏に回ると止まるので、タイマーで回す。
+  // こうしておくと、画面を見ていない間も探索は最後まで進む。
+  const loop = () => {
+    const more = runner.step(25);
+    paint();
+    if (more) { runRaf = setTimeout(loop, 0); return; }
+    finishRun(performance.now() - t0);
+  };
+  $('#runSub').textContent = `${c.days.length}日 × ${c.members.length}名の割り当てを、条件を変えながら試します`;
+  renderRunChecks();
+  paint();
+  runRaf = setTimeout(loop, 0);
+}
+
+function finishRun(ms) {
+  clearTimeout(runRaf);
+  runRaf = null;
+  $('#runPulse').hidden = true;
+  $('#btnRunStop').hidden = true;
+  const best = runner.best;
+  if (!best) { goStep(1); return; }
+  mdata().grid = best.grid;
+  save();
+  $('#runTitle').textContent = '組み終わりました';
+  $('#runSub').textContent = `${runner.done}回ためして、一番良い配置を選びました（${Math.round(ms)}ms）`;
+  setTimeout(() => { if (step === 2) goStep(3); }, 450);
+}
+
+function renderRunChecks() {
+  const o = state.options;
+  const host = $('#runChecks');
+  host.innerHTML = '';
+  const list = [
+    '希望休を守る', `連勤${o.maxConsecutive}日まで`, `休み最低${o.minOffDays}日`,
+    '担当・対応パターン', '必要人数', '連休の希望', '休館日',
+  ];
+  const wrap = el('div', 'legend');
+  for (const x of list) {
+    const c = el('span', 'legend-item');
+    c.appendChild(el('b', 'p-H', '✓'));
+    c.appendChild(el('span', '', x));
+    wrap.appendChild(c);
+  }
+  host.appendChild(wrap);
+}
+
+/* ================= 手順3：確認して仕上げる ================= */
+function renderResult() {
+  const grid = mdata().grid;
+  if (!grid) return;
+  const c = ctx();
+  const v = validate(c, grid);
+  $('#resTitle').textContent = `${state.year}年${state.month}月のシフト案`;
+  renderKpis(v);
+  renderLegend();
+  renderSheet(v);
+  renderNotes(v, grid);
+  renderPersum(v);
+  renderDaystrip(v);
+  renderTimeline();
+  $('#sheetView').hidden = view !== 'sheet';
+  $('#tlView').hidden = view !== 'tl';
+  $('#stepSub3').textContent = `不足${v.issues.filter((i) => i.type === 'shortage' && !i.optional).length}枠`;
+}
+
+function renderKpis(v) {
+  const short = v.issues.filter((i) => i.type === 'shortage' && !i.optional);
+  const soft = v.issues.filter((i) => i.type === 'shortage' && i.optional);
+  const other = v.issues.filter((i) => i.type !== 'shortage');
+  const need = v.dayStats.reduce((a, x) => a + x.required, 0);
+  const got = v.dayStats.reduce((a, x) => a + x.filled, 0);
+  const hours = v.dayStats.reduce((a, x) => a + x.hours, 0);
+
+  const h = $('#headline');
+  h.className = 'headline ' + (short.length ? 'bad' : 'good');
+  h.textContent = short.length
+    ? `人が足りない枠が ${short.length}件 あります。下の「申し送り」から、誰を入れるか選んでください。`
+    : 'このままシフト表として使えます。人が足りない枠はありません。';
+
+  const host = $('#kpis');
+  host.innerHTML = '';
+  const card = (k, val, note, cls) => {
+    const c = el('div', 'kpi ' + (cls || ''));
+    c.appendChild(el('div', 'k', k));
+    c.appendChild(el('div', 'v', String(val)));
+    c.appendChild(el('div', 'n', note));
+    return c;
+  };
+  host.appendChild(card('人が足りない枠', short.length, short.length ? '要対応' : '問題なし', short.length ? 'bad' : 'ok'));
+  host.appendChild(card('枠の充足率', (need ? Math.round((got / need) * 100) : 0) + '%', `${got} / ${need}枠`));
+  host.appendChild(card('空きでOKの枠', soft.length, '無くても回る枠'));
+  host.appendChild(card('その他の注意', other.length, '連勤・休日数など'));
+  host.appendChild(card('月の総工数', hours + 'h', '全員の実働の合計'));
+  host.appendChild(card('のべ出勤', v.memberStats.reduce((a, s) => a + s.work, 0) + '日', '全員の出勤日の合計'));
+}
+
+function renderLegend() {
+  const host = $('#legend');
+  host.innerHTML = '';
+  $('#legendPad').hidden = !$('#showLegend').checked;
+  for (const code of PATTERN_CODES) {
+    const p = PATTERNS[code];
+    const s = el('span', 'legend-item');
+    s.appendChild(el('b', 'p-' + code, code));
+    s.appendChild(el('span', '', p.time));
+    s.appendChild(el('span', 'legend-h', `実働${p.hours}h`));
+    host.appendChild(s);
+  }
+  for (const [sym, info] of Object.entries(OFF_SYMBOLS)) {
+    const s = el('span', 'legend-item');
+    s.appendChild(el('b', '', sym));
+    s.appendChild(el('span', '', info.label));
+    host.appendChild(s);
+  }
+  const s = el('span', 'legend-item');
+  s.appendChild(el('b', '', '空欄'));
+  s.appendChild(el('span', '', '常勤者の出勤日'));
+  host.appendChild(s);
+}
+
+function cellTitle(m, day, val) {
+  const date = `${state.month}月${day.day}日(${DOW_LABELS[day.dow]})`;
+  let what;
+  if (PATTERNS[val]) what = `${val}　${PATTERNS[val].time}（実働${PATTERNS[val].hours}h）`;
+  else if (OFF_SYMBOLS[val]) what = `${val}　${OFF_SYMBOLS[val].label}`;
+  else if (m.mode === 'always') what = '出勤（常勤・記号なし）';
+  else if (m.mode === 'manual') what = '手入力（自動では触りません）';
+  else what = '未割当';
+  return `${m.name}　${date}\n${what}\nクリックで変更／ドラッグで同じ日の人と入れ替え`;
+}
+
+function renderSheet(v) {
+  const d = days();
+  const grid = mdata().grid;
+  const host = $('#shiftGrid');
+  host.innerHTML = '';
+  const showTimes = $('#showTimes').checked;
+  document.body.classList.toggle('big', $('#bigText').checked);
+
+  const table = el('table', 'sheet');
+  const thead = el('thead');
+  const r1 = el('tr');
+  ['区分', '名前', '担当', '出勤'].forEach((h, i) => r1.appendChild(el('th', 'stick c' + (i + 1), h)));
+  d.forEach((day, col) => {
+    const th = el('th', 'day' + (day.dow === 0 ? ' sun' : day.dow === 6 ? ' sat' : '') + (day.closed ? ' closed' : '') + (isToday(day) ? ' today' : ''));
+    th.dataset.col = col;
+    th.appendChild(el('div', 'dnum', String(day.day)));
+    th.appendChild(el('div', 'dow', DOW_LABELS[day.dow]));
+    th.appendChild(el('div', 'rooms', day.closed ? '休館' : day.rooms + '室'));
+    th.title = `${state.month}月${day.day}日(${DOW_LABELS[day.dow]})　${day.closed ? '休館日' : '予約 ' + day.rooms + '室'}`;
+    r1.appendChild(th);
+  });
+  thead.appendChild(r1);
+  table.appendChild(thead);
+
+  const tbody = el('tbody');
+  let prevGroup = null;
+  for (const m of activeMembers()) {
+    const tr = el('tr');
+    const group = (m.roles || [])[0] || '';
+    if (prevGroup !== null && group !== prevGroup) tr.classList.add('group-top');
+    prevGroup = group;
+    tr.appendChild(el('td', 'stick c1', m.kubun || ''));
+    tr.appendChild(el('td', 'stick c2', m.name));
+    const roles = el('td', 'stick c3');
+    for (const r of (m.roles || [])) roles.appendChild(el('span', 'tag ' + r, r));
+    tr.appendChild(roles);
+    const st = v.memberStats.find((s) => s.id === m.id);
+    tr.appendChild(el('td', 'stick c4', m.mode === 'manual' ? '—' : String(st ? st.work : 0)));
+
+    d.forEach((day, col) => {
+      const val = grid[m.id] ? grid[m.id][day.day] : '';
+      const td = el('td', 'cell');
+      td.dataset.member = m.id;
+      td.dataset.day = day.day;
+      td.dataset.col = col;
+      const shown = val === null || val === undefined ? '' : val;
+      td.textContent = showTimes && PATTERNS[shown] ? PATTERNS[shown].time.split('〜')[0] : shown;
+      td.title = cellTitle(m, day, shown);
+      if (isToday(day)) td.classList.add('today');
+      if (isWorkSymbol(val)) td.classList.add('work', 'p-' + val);
+      else if (val === '休') td.classList.add('off');
+      else if (val === '特') td.classList.add('special');
+      else if (val === '✖') td.classList.add('ng');
+      if (m.mode === 'always' && val === '') td.classList.add('always-work');
+      if ((mdata().requests[m.id] || {})[day.day]) td.classList.add('requested');
+      if (day.dow === 0) td.classList.add('sun');
+      if (day.dow === 6) td.classList.add('sat');
+      if (m.mode !== 'manual' && !day.closed) {
+        td.draggable = true;
+        td.addEventListener('dragstart', onDragStart);
+        td.addEventListener('dragover', onDragOver);
+        td.addEventListener('dragleave', () => td.classList.remove('over', 'no'));
+        td.addEventListener('drop', onDrop);
+        td.addEventListener('dragend', onDragEnd);
+      }
+      td.addEventListener('click', (ev) => openCellPopup(ev, m, day));
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+
+  const foot = el('tbody', 'foot');
+  const mk = (label, fn) => {
+    const tr = el('tr');
+    const th = el('td', 'stick c1 label', label);
+    th.colSpan = 4;
+    tr.appendChild(th);
+    d.forEach((day, col) => {
+      const ds = v.dayStats.find((x) => x.day === day.day);
+      const td = el('td', 'num');
+      td.dataset.col = col;
+      const [text, bad] = fn(ds);
+      td.textContent = text;
+      if (bad) td.classList.add('warn');
+      tr.appendChild(td);
+    });
+    return tr;
+  };
+  foot.appendChild(mk('必要人数', (ds) => [String(ds.required), false]));
+  foot.appendChild(mk('入っている人数', (ds) => [String(ds.filled), ds.filled < ds.required]));
+  foot.appendChild(mk('出勤する人（全体）', (ds) => [String(ds.headcount), false]));
+  foot.appendChild(mk('その日の総工数(h)', (ds) => [String(ds.hours), false]));
+  table.appendChild(tbody);
+  table.appendChild(foot);
+  attachCrosshair(table);
+  host.appendChild(table);
+}
+
+function attachCrosshair(table) {
+  let last = null;
+  const clear = () => {
+    if (last === null) return;
+    table.querySelectorAll(`[data-col="${last}"]`).forEach((n) => n.classList.remove('col-hi'));
+    last = null;
+  };
+  table.addEventListener('mouseover', (ev) => {
+    const cell = ev.target.closest && ev.target.closest('[data-col]');
+    if (!cell) { clear(); return; }
+    if (cell.dataset.col === last) return;
+    clear();
+    last = cell.dataset.col;
+    table.querySelectorAll(`[data-col="${last}"]`).forEach((n) => n.classList.add('col-hi'));
+  });
+  table.addEventListener('mouseleave', clear);
+}
+
+/* ---- ドラッグで入れ替え（同じ日の2人のあいだだけ） ---- */
+let dragFrom = null;
+function cellValue(memberId, day) {
+  const g = mdata().grid;
+  const v = g[memberId] ? g[memberId][day] : '';
+  return v === null || v === undefined ? '' : v;
+}
+/** その人がその日にその値を持てるか */
+function canHold(m, day, val) {
+  if (m.mode === 'manual') return false;
+  const req = (mdata().requests[m.id] || {})[day];
+  if (isWorkSymbol(val)) {
+    if (req) return false;                                   // 希望休の日に仕事は入れない
+    if (!(m.patterns || []).includes(val)) return false;     // 対応できないパターン
+    const d = days().find((x) => x.day === day);
+    if (d && d.closed) return false;
+    return true;
+  }
+  return true;                                               // 休み・空欄はいつでも可
+}
+function onDragStart(e) {
+  const td = e.currentTarget;
+  dragFrom = { member: td.dataset.member, day: Number(td.dataset.day), col: td.dataset.col };
+  td.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', 'swap');
+}
+function onDragOver(e) {
+  if (!dragFrom) return;
+  const td = e.currentTarget;
+  const ok = td.dataset.col === dragFrom.col && td.dataset.member !== dragFrom.member && swapOk(td);
+  td.classList.toggle('over', ok);
+  td.classList.toggle('no', !ok);
+  if (ok) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+}
+function swapOk(td) {
+  const day = Number(td.dataset.day);
+  const a = state.members.find((m) => m.id === dragFrom.member);
+  const b = state.members.find((m) => m.id === td.dataset.member);
+  if (!a || !b) return false;
+  return canHold(a, day, cellValue(b.id, day)) && canHold(b, day, cellValue(a.id, day));
+}
+function onDrop(e) {
+  e.preventDefault();
+  const td = e.currentTarget;
+  td.classList.remove('over', 'no');
+  if (!dragFrom || td.dataset.col !== dragFrom.col || !swapOk(td)) return;
+  const day = Number(td.dataset.day);
+  const g = mdata().grid;
+  const a = dragFrom.member, b = td.dataset.member;
+  const va = cellValue(a, day), vb = cellValue(b, day);
+  g[a] = g[a] || {}; g[b] = g[b] || {};
+  g[a][day] = vb; g[b][day] = va;
+  save();
+  const an = state.members.find((m) => m.id === a).name;
+  const bn = state.members.find((m) => m.id === b).name;
+  toast(`${state.month}/${day}　${an} ⇄ ${bn} を入れ替えました`);
+  dragFrom = null;
+  renderResult();
+}
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  $$('.cell.over,.cell.no').forEach((n) => n.classList.remove('over', 'no'));
+  dragFrom = null;
+}
+
+/* ---- セルを直接変える ---- */
+function openCellPopup(ev, member, day) {
+  if (dragFrom) return;
+  const pop = $('#cellPopup');
+  pop.innerHTML = '';
+  pop.classList.remove('hidden');
+  pop.appendChild(el('div', 'pop-head', `${member.name}　${state.month}/${day.day}(${DOW_LABELS[day.dow]})`));
+  const cur = cellValue(member.id, day.day);
+  const opts = el('div', 'pop-opts');
+  const add = (val, label, foreign) => {
+    const b = el('button', 'pop-opt' + (val === cur ? ' current' : '') + (foreign ? ' foreign' : ''), label);
+    b.addEventListener('click', () => {
+      const g = mdata().grid;
+      g[member.id] = g[member.id] || {};
+      g[member.id][day.day] = val;
+      save();
+      pop.classList.add('hidden');
+      renderResult();
+    });
+    opts.appendChild(b);
+  };
+  for (const code of PATTERN_CODES) {
+    add(code, `${code}　${PATTERNS[code].time}`, !(member.patterns || []).includes(code));
+  }
+  for (const [sym, info] of Object.entries(OFF_SYMBOLS)) add(sym, `${sym}　${info.label}`);
+  if (member.mode === 'always') add('', '空欄（出勤）');
+  pop.appendChild(opts);
+  const r = ev.currentTarget.getBoundingClientRect();
+  pop.style.top = Math.min(window.innerHeight - 330, r.bottom + window.scrollY + 4) + 'px';
+  pop.style.left = Math.min(window.innerWidth - 280, r.left + window.scrollX) + 'px';
+}
+document.addEventListener('click', (e) => {
+  const pop = $('#cellPopup');
+  if (!pop.classList.contains('hidden') && !pop.contains(e.target) && !e.target.classList.contains('cell')) pop.classList.add('hidden');
+});
+
+/* ---- 申し送り ---- */
+function renderNotes(v, grid) {
+  const host = $('#notes');
+  host.innerHTML = '';
+  const groups = [
+    ['shortage', 'bad', '人が足りない枠', (i) => !i.optional],
+    ['shortage', 'warn', '空きでOKの枠（対応できる人が休み）', (i) => i.optional],
+    ['request', 'bad', '希望休との食い違い', () => true],
+    ['streak', 'warn', '連勤が上限を超えている', () => true],
+    ['streakWish', 'warn', '連休の希望が入っていない', () => true],
+    ['off', 'warn', '休日数が足りない', () => true],
+    ['workload', 'warn', '出勤日数のかたより', () => true],
+  ];
+  let any = false;
+  for (const [type, cls, title, filter] of groups) {
+    const list = v.issues.filter((i) => i.type === type && filter(i));
+    if (!list.length) continue;
+    any = true;
+    host.appendChild(el('div', 'rulehead', `${title}（${list.length}件）`));
+    for (const i of list) {
+      const n = el('div', 'note ' + cls);
+      n.appendChild(el('span', 'ic'));
+      const bd = el('div', 'bd');
+      bd.appendChild(el('div', 't', i.message));
+      if (type === 'shortage') {
+        const cands = candidatesFor({ ...ctx() }, grid, i.day, i.pattern, i.roles);
+        if (cands.length) {
+          const sel = el('select');
+          sel.appendChild(el('option', '', '― この人を入れる ―'));
+          for (const c of cands) {
+            const o = el('option', '', c.name); o.value = c.id;
+            sel.appendChild(o);
+          }
+          sel.addEventListener('change', () => {
+            if (!sel.value) return;
+            const g = mdata().grid;
+            g[sel.value] = g[sel.value] || {};
+            g[sel.value][i.day] = i.pattern;
+            save();
+            renderResult();
+            toast('割り当てました');
+          });
+          bd.appendChild(sel);
+        } else {
+          bd.appendChild(el('div', 'd', 'この日に空いている対応者がいません。希望休を調整するか、必要人数のルールを見直してください。'));
+        }
+      }
+      n.appendChild(bd);
+      host.appendChild(n);
+    }
+  }
+  if (!any) host.appendChild(el('p', 'hint', '直したほうがよい点はありません。'));
+}
+
+function renderPersum(v) {
+  const host = $('#persum');
+  host.innerHTML = '';
+  const d = days();
+  for (const m of activeMembers()) {
+    const st = v.memberStats.find((s) => s.id === m.id);
+    if (!st) continue;
+    const row = el('div', 'psum');
+    row.appendChild(el('div', 'nm', m.name));
+    const bar = el('div', 'bar');
+    const i = el('i');
+    const target = m.targetDays || d.length;
+    i.style.width = Math.min(100, (st.work / Math.max(1, target)) * 100) + '%';
+    if (st.work > target + 2) i.classList.add('over');
+    bar.appendChild(i);
+    row.appendChild(bar);
+    row.appendChild(el('div', 'nums', m.mode === 'manual' ? '手入力' : `出${st.work} 休${st.off} 連${st.maxStreak}`));
+    host.appendChild(row);
+  }
+}
+
+/* ---- 日別タイムライン ---- */
+function hourSlots() {
+  const out = [];
+  for (let h = DAY_START; h < DAY_END; h++) out.push(h);
+  return out;
+}
+function coversHour(code, h) {
+  return patternSegments(code).some((s) => s.from <= h && h < s.to);
+}
+
+function renderDaystrip(v) {
+  const host = $('#daystrip');
+  host.innerHTML = '';
+  const d = days();
+  if (tlDay === null || !d.some((x) => x.day === tlDay)) {
+    const bad = v.dayStats.find((x) => x.filled < x.required);
+    tlDay = bad ? bad.day : d[0].day;
+  }
+  for (const day of d) {
+    const ds = v.dayStats.find((x) => x.day === day.day);
+    const b = el('button', 'dbtn' + (day.day === tlDay ? ' on' : '') + (ds && ds.filled < ds.required ? ' short' : ''));
+    b.appendChild(el('div', 'n', String(day.day)));
+    b.appendChild(el('div', 'w', DOW_LABELS[day.dow]));
+    b.appendChild(el('div', 'r', day.closed ? '休館' : day.rooms + '室'));
+    b.addEventListener('click', () => { tlDay = day.day; renderDaystrip(v); renderTimeline(); });
+    host.appendChild(b);
+  }
+}
+
+function renderTimeline() {
+  const host = $('#timeline');
+  host.innerHTML = '';
+  const d = days();
+  const day = d.find((x) => x.day === tlDay);
+  if (!day) return;
+  const grid = mdata().grid;
+  const hours = hourSlots();
+
+  $('#tlTitle').textContent = `${state.month}月${day.day}日（${DOW_LABELS[day.dow]}）`;
+  $('#tlSub').textContent = day.closed ? '休館日' : `予約 ${day.rooms}室 ／ 必要 ${expandSlots(state.rules, day.rooms).length}名`;
+
+  // その日に必要な枠（時間帯ごとの必要人数を出すため）
+  const slots = day.closed ? [] : expandSlots(state.rules, day.rooms);
+  const needAt = hours.map((h) => slots.filter((s) => coversHour(s.pattern, h)).length);
+
+  const working = activeMembers()
+    .map((m) => ({ m, val: grid[m.id] ? grid[m.id][day.day] : '' }))
+    .filter((x) => isWorkSymbol(x.val) || (x.m.mode === 'always' && x.val === ''));
+
+  const table = el('table', 'tl');
+  const thead = el('thead');
+  const hr = el('tr');
+  hr.appendChild(el('th', 'who', 'スタッフ'));
+  for (const h of hours) hr.appendChild(el('th', '', h + '時'));
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  const tbody = el('tbody');
+  if (!working.length) {
+    const tr = el('tr');
+    const td = el('td', 'who', '出勤者なし');
+    td.colSpan = hours.length + 1;
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+  for (const { m, val } of working) {
+    const tr = el('tr');
+    const who = el('td', 'who');
+    who.appendChild(el('div', 'n', m.name));
+    who.appendChild(el('div', 'p', PATTERNS[val] ? `${val} ${PATTERNS[val].time}` : (m.mode === 'always' ? '常勤（記号なし）' : val)));
+    tr.appendChild(who);
+    const role = (m.roles || [])[0] || '全般';
+    for (const h of hours) {
+      const td = el('td', 'h');
+      const on = PATTERNS[val] ? coversHour(val, h) : (m.mode === 'always' && h >= 9 && h < 18);
+      if (on) td.classList.add('on', 'k' + role);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  const cnt = el('tr', 'count');
+  const cw = el('td', 'who', '館内の人数（必要）');
+  cnt.appendChild(cw);
+  hours.forEach((h, idx) => {
+    const n = working.filter(({ m, val }) => (PATTERNS[val] ? coversHour(val, h) : (m.mode === 'always' && h >= 9 && h < 18))).length;
+    const need = needAt[idx];
+    const td = el('td', '', need ? `${n}／${need}` : String(n));
+    if (need && n < need) td.classList.add('low');
+    cnt.appendChild(td);
+  });
+  tbody.appendChild(cnt);
+  table.appendChild(tbody);
+  host.appendChild(table);
+}
+
+/* ---------------- 書き出し ---------------- */
+function copyTSV() {
+  const grid = mdata().grid;
+  if (!grid) { toast('先にシフトを組んでください'); return; }
+  const tsv = toTSV(activeMembers(), days(), grid, { header: false });
+  navigator.clipboard.writeText(tsv).then(
+    () => toast('コピーしました。スプレッドシートの「区分」列の1行目に貼り付けてください'),
+    () => {
+      const ta = el('textarea');
+      ta.value = tsv;
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      toast('コピーしました');
+    },
+  );
+}
+
+async function downloadCSV() {
+  const grid = mdata().grid;
+  if (!grid) { toast('先にシフトを組んでください'); return; }
+  const tsv = toTSV(activeMembers(), days(), grid, { header: true });
+  const csv = tsv.split('\n').map((line) => line.split('\t').map((c) => (/[",]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c)).join(',')).join('\r\n');
+  const body = '﻿' + csv;
+  const filename = `シフト案_${state.year}年${state.month}月.csv`;
+  const dl = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+  if (dl) {
+    try { await dl.save({ filename, data: body }); toast('CSVを保存しました'); }
+    catch (e) { if (!e || e.code !== 'declined') toast('CSVを保存できませんでした'); }
+    return;
+  }
+  const blob = new Blob([body], { type: 'text/csv;charset=utf-8' });
+  const a = el('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------------- 起動 ---------------- */
+function shiftMonth(delta) {
+  let y = state.year, m = state.month + delta;
+  if (m < 1) { m = 12; y--; }
+  if (m > 12) { m = 1; y++; }
+  state.year = y; state.month = m;
+  tlDay = null;
+  save();
+  syncMonthInputs();
+  goStep(1);
+}
+function syncMonthInputs() {
+  $('#year').value = state.year;
+  $('#month').value = state.month;
+}
+
+$$('#stepper .step').forEach((b) => b.addEventListener('click', () => {
+  const n = Number(b.dataset.s);
+  if (n === 2) { if (mdata().grid) goStep(3); else startRun(false); return; }
+  goStep(n);
+}));
+$('#btnRun').addEventListener('click', () => startRun(false));
+$('#btnRedo').addEventListener('click', () => startRun(true));
+$('#btnBack1').addEventListener('click', () => goStep(1));
+$('#btnRunStop').addEventListener('click', () => { if (runRaf) finishRun(0); });
+$('#prevMonth').addEventListener('click', () => shiftMonth(-1));
+$('#nextMonth').addEventListener('click', () => shiftMonth(1));
+$('#year').addEventListener('change', (e) => { state.year = Number(e.target.value); tlDay = null; save(); goStep(1); });
+$('#month').addEventListener('change', (e) => { state.month = Number(e.target.value); tlDay = null; save(); goStep(1); });
+$('#btnCopy').addEventListener('click', copyTSV);
+$('#btnCsv').addEventListener('click', downloadCSV);
+$('#showTimes').addEventListener('change', renderResult);
+$('#bigText').addEventListener('change', renderResult);
+$('#showLegend').addEventListener('change', renderLegend);
+$$('#viewSeg button').forEach((b) => b.addEventListener('click', () => {
+  view = b.dataset.v;
+  $$('#viewSeg button').forEach((x) => x.classList.toggle('on', x === b));
+  $('#sheetView').hidden = view !== 'sheet';
+  $('#tlView').hidden = view !== 'tl';
+}));
+$$('#importMode button').forEach((b) => b.addEventListener('click', () => setImportMode(b.dataset.mode)));
+$('#importCsv').addEventListener('click', doImportCsv);
+$('#csvText').addEventListener('input', renderCsvMapping);
+$('#csvFile').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { $('#csvText').value = r.result; renderCsvMapping(); };
+  r.readAsText(f, 'utf-8');
+});
+$('#pasteSample').addEventListener('click', () => {
+  const names = activeMembers().slice(1, 5).map((m) => m.name);
+  $('#csvText').value = [
+    'タイムスタンプ,お名前,希望休の日,備考',
+    `2026/08/20 9:01,${names[0] || '山田 麗奈'},"3, 4, 12",`,
+    `2026/08/20 9:12,${names[1] || '山下 創士朗'},"8日 9日 20日",`,
+    `2026/08/20 10:02,${names[2] || '駒澤 晴信'},"15〜17",有給希望`,
+    `2026/08/20 10:30,${names[3] || '薄田 裕花'},"${state.month}/5, ${state.month}/6",`,
+  ].join('\n');
+  renderCsvMapping();
+});
+$('#pasteMsgSample').addEventListener('click', () => {
+  const names = activeMembers().slice(1, 5).map((m) => m.name);
+  $('#csvText').value = [
+    `09:12\t${names[0] || '宮平 絹江'}\t一度3連休が取りたいです`,
+    `09:20\t${names[1] || '日下 堅人'}\t6日 12日は休み`,
+    `10:02\t${names[2] || '山田 麗奈'}\t15〜17 有給で取らせてください`,
+    `10:30\t${names[3] || '山下 創士朗'}\t${state.month}/5と${state.month}/6、どうしても来られません`,
+  ].join('\n');
+});
+$('#btnClearReq').addEventListener('click', () => {
+  if (!confirm(`${state.year}年${state.month}月の希望休をすべて消します。よろしいですか？`)) return;
+  mdata().requests = {}; mdata().streaks = {}; mdata().noRequest = {};
+  save(); renderCollect();
+});
+$('#applyRoomsPaste').addEventListener('click', () => {
+  const parsed = parseRoomsInput($('#roomsPaste').value, days().length);
+  const n = Object.keys(parsed).length;
+  if (!n) { toast('数値を読み取れませんでした'); return; }
+  mdata().rooms = { ...mdata().rooms, ...parsed };
+  save(); renderRoomsGrid(); renderSummary();
+  toast(`${n}日分の客室数を取り込みました`);
+});
+$('#btnToggleAdv').addEventListener('click', () => {
+  const b = $('#advBody');
+  b.hidden = !b.hidden;
+  $('#btnToggleAdv').textContent = b.hidden ? '開く' : '閉じる';
+  if (!b.hidden) { renderStaff(); renderRuleTable(); }
+});
+$('#addMember').addEventListener('click', () => {
+  state.members.push({
+    id: crypto.randomUUID(), name: '新しいスタッフ', kubun: '', roles: [], patterns: [],
+    mode: 'auto', targetDays: 20, maxConsecutive: state.options.maxConsecutive, fixedOffDows: [], active: true, note: '',
+  });
+  save(); renderStaff(); renderRoster();
+});
+$('#resetMembers').addEventListener('click', () => {
+  if (!confirm('スタッフ一覧を初期値に戻します。よろしいですか？')) return;
+  state.members = defaultMembers(); save(); renderCollect(); renderStaff();
+});
+$('#addRule').addEventListener('click', () => {
+  state.rules.push({ id: 'r' + Date.now(), label: '新しい枠', pattern: 'H', roles: [], base: 1, perRooms: 0, max: 2, enabled: true, optional: false });
+  save(); renderRuleTable();
+});
+$('#resetRules').addEventListener('click', () => {
+  if (!confirm('必要人員のルールを初期値に戻します。よろしいですか？')) return;
+  state.rules = defaultSlotRules(); save(); renderRuleTable(); renderCollect();
+});
+
+syncMonthInputs();
+bindOptions();
+setImportMode('msg');
+goStep(mdata().grid ? 3 : 1);
+</script>

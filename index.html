@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>シフト自動作成 | ホテルかなろあ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="logo">
+      <div class="mark">KA</div>
+      <div><div class="nm">SHIFT PLANNER</div><div class="sub">ホテルかなろあ</div></div>
+    </div>
+    <div class="store" id="storeLabel">渡嘉敷島 本館</div>
+    <div class="spacer"></div>
+    <div class="monthpick">
+      <button id="prevMonth" class="btn sm" title="前の月">◀</button>
+      <input type="number" id="year" min="2024" max="2035" step="1">
+      <span>年</span>
+      <input type="number" id="month" min="1" max="12" step="1">
+      <span>月</span>
+      <button id="nextMonth" class="btn sm" title="次の月">▶</button>
+    </div>
+    <span class="saved" id="saveState"></span>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <button class="step on" data-s="1"><div class="no">1</div><div><div class="t">希望を集める</div><div class="d" id="stepSub1">—</div></div></button>
+    <button class="step" data-s="2"><div class="no">2</div><div><div class="t">シフトを組む</div><div class="d" id="stepSub2">条件を満たす配置を探す</div></div></button>
+    <button class="step" data-s="3"><div class="no">3</div><div><div class="t">確認して仕上げる</div><div class="d" id="stepSub3">手直ししてコピー</div></div></button>
+  </div>
+
+  <!-- ============ 手順1 ============ -->
+  <section id="scCollect">
+    <div class="grid1">
+      <div>
+        <div class="card">
+          <div class="card-h">
+            <h2>希望休の提出状況</h2>
+            <span class="sub" id="collectSub">—</span>
+            <div class="r">
+              <button class="btn sm" id="btnClearReq">今月の希望休を消す</button>
+            </div>
+          </div>
+          <div class="pad" style="padding-top:4px">
+            <div style="overflow:auto">
+              <table class="roster">
+                <thead><tr>
+                  <th style="width:190px">スタッフ</th>
+                  <th style="width:150px">担当</th>
+                  <th style="width:88px">提出</th>
+                  <th>希望休</th>
+                </tr></thead>
+                <tbody id="rosterBody"></tbody>
+              </table>
+            </div>
+            <p class="stripnote">行をクリックすると、その人の希望休カレンダーが開きます。帯の色 ― <b style="color:var(--accent)">休</b> 希望休 ／ <b style="color:var(--warn)">特</b> 特別休暇 ／ <b style="color:var(--bad)">✖</b> 不在・NG</p>
+            <div id="streakWishes" hidden></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>希望休を取り込む</h2>
+            <div class="r">
+              <div class="seg" id="importMode">
+                <button data-mode="msg" class="on">LINE・メッセージ</button>
+                <button data-mode="csv">Googleフォーム（CSV）</button>
+              </div>
+            </div>
+          </div>
+          <div class="pad">
+            <p class="hint" id="hintMsg">届いたメッセージをそのまま貼り付けてください。<b>名前と日にちが入っていれば形式は問いません</b>。苗字だけ・下の名前だけでも照合します。「10日まで出勤」「3連休が取りたい」のような書き方にも対応します。</p>
+            <p class="hint" id="hintCsv" hidden>回答スプレッドシートを「ファイル ▸ ダウンロード ▸ カンマ区切り形式(.csv)」で保存し、そのファイルを選ぶか、中身を貼り付けてください。</p>
+            <div class="row" id="rowCsv" hidden>
+              <input type="file" id="csvFile" accept=".csv,text/csv">
+              <span class="or">または</span>
+              <button id="pasteSample" class="btn sm">記入例を入れる</button>
+            </div>
+            <div class="row" id="rowMsg">
+              <button id="pasteMsgSample" class="btn sm">記入例を入れる</button>
+            </div>
+            <textarea id="csvText" rows="5" placeholder="ここにメッセージを貼り付け"></textarea>
+            <div id="csvMapping" class="row"></div>
+            <div class="row">
+              <button id="importCsv" class="btn primary">取り込む</button>
+              <label class="inline"><input type="checkbox" id="csvReplace"> 取り込む前に今月の希望休を消す</label>
+            </div>
+            <div id="csvResult"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>予約客室数</h2>
+            <span class="sub">全28室。入れた数に応じて必要人数が変わります</span>
+            <div class="r">
+              <label class="inline">空欄の日の既定値 <input type="number" id="defaultRooms" min="0" max="28" class="num-input"> 室</label>
+            </div>
+          </div>
+          <div class="pad">
+            <div class="row">
+              <button id="applyRoomsPaste" class="btn sm">貼り付けから取り込む</button>
+              <span class="or">1日目から順に数値を並べるか、「3&#9;12」のように日付と客室数の組で</span>
+            </div>
+            <textarea id="roomsPaste" rows="2" placeholder="例: 8 8 12 24 24 16 …"></textarea>
+            <div id="roomsGrid" class="rooms-grid"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>詳細設定</h2>
+            <span class="sub">スタッフ名簿・必要人員のルール・全体の条件</span>
+            <div class="r"><button class="btn sm" id="btnToggleAdv">開く</button></div>
+          </div>
+          <div class="pad" id="advBody" hidden>
+            <h3>スタッフ</h3>
+            <p class="hint">担当と対応パターンが、その人に割り当て可能な仕事を決めます。「常勤（記号なし）」は出勤日を空欄、休みだけ記号で出します。</p>
+            <div class="row">
+              <button id="addMember" class="btn sm">スタッフを追加</button>
+              <button id="resetMembers" class="btn sm danger">初期値に戻す</button>
+            </div>
+            <div style="overflow:auto"><div id="staffTable"></div></div>
+
+            <h3>必要人員のルール</h3>
+            <p class="hint">必要人数 ＝ 基本人数 ＋ (予約客室数 ÷ 加算間隔) ／ 上限まで。既定値は R8 7月・8月の実績（1日 7〜10名）に合わせています。</p>
+            <div style="overflow:auto"><div id="rulesTable"></div></div>
+            <div class="row">
+              <button id="addRule" class="btn sm">枠を追加</button>
+              <button id="resetRules" class="btn sm danger">初期値に戻す</button>
+            </div>
+            <div id="rulesPreview"></div>
+
+            <h3>全体の条件</h3>
+            <div class="opts">
+              <label>連勤の上限 <input type="number" id="optMaxConsecutive" min="1" max="14"> 日</label>
+              <label>月の最低休日数 <input type="number" id="optMinOff" min="0" max="15"> 日</label>
+              <label>探索の試行回数 <input type="number" id="optIterations" min="10" max="3000" step="10"> 回</label>
+              <label class="inline"><input type="checkbox" id="optKeepPattern"> 前日と同じパターンを優先する</label>
+            </div>
+
+            <h3>勤務パターン</h3>
+            <div id="patternTable"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-h"><h2>集計</h2></div>
+          <div class="pad">
+            <div class="ringwrap">
+              <div class="ring">
+                <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+                  <circle cx="42" cy="42" r="35" fill="none" stroke="var(--line2)" stroke-width="8"/>
+                  <circle id="ringArc" cx="42" cy="42" r="35" fill="none" stroke="var(--ok)" stroke-width="8"
+                    stroke-linecap="round" stroke-dasharray="219.9" stroke-dashoffset="219.9"
+                    style="transition:stroke-dashoffset .6s cubic-bezier(.3,.9,.3,1)"/>
+                </svg>
+                <div class="val"><div><b id="ringNum">—</b><i>提出済み</i></div></div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="sumline"><span>今月の必要枠</span><b id="sNeed">—<em>枠</em></b></div>
+                <div class="sumline"><span>集まった希望休</span><b id="sWish">—<em>日</em></b></div>
+                <div class="sumline"><span>連休の希望</span><b id="sStreak">—<em>件</em></b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>守る条件</h2></div>
+          <div class="pad" style="padding-top:10px">
+            <div class="rulehead">必ず守る</div>
+            <div id="ruleHard"></div>
+            <div class="rulehead">できるだけ守る</div>
+            <div id="ruleSoft"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="launch">
+      <div>
+        <div class="lt" id="launchTitle">—</div>
+        <div class="ld" id="launchNote">—</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn go" id="btnRun">シフトを組む</button>
+    </div>
+  </section>
+
+  <!-- ============ 手順2 ============ -->
+  <section id="scRun" hidden>
+    <div class="runhead">
+      <span class="pulse" id="runPulse"></span>
+      <div><div class="h" id="runTitle">配置を探しています</div><div class="s" id="runSub">—</div></div>
+      <div style="margin-left:auto"><button class="btn" id="btnRunStop">中断する</button></div>
+    </div>
+    <div class="rungrid">
+      <div>
+        <div class="card">
+          <div class="card-h"><h2>探索の進み</h2><span class="sub">数字はすべて実際の探索結果です</span></div>
+          <div class="pad">
+            <div class="progwrap"><div class="progbar" id="progBar"></div></div>
+            <div class="runstat"><span id="progLeft">—</span><span id="progRight">—</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-h"><h2>良くなった記録</h2><span class="sub">より良い配置が見つかった試行だけ残ります</span></div>
+          <div class="runlog" id="runLog" style="border:none;box-shadow:none;border-radius:0 0 var(--r) var(--r)"></div>
+        </div>
+      </div>
+      <div>
+        <div class="mcard">
+          <div class="lab">試した配置</div>
+          <div class="bignum" id="mTried">0</div>
+          <div class="mrow"><span class="k2">人が足りない枠</span><span class="v" id="mShort">—</span></div>
+          <div class="mrow"><span class="k2">枠の充足率</span><span class="v" id="mFill">—</span></div>
+          <div class="mrow"><span class="k2">月の総工数</span><span class="v" id="mHours">—</span></div>
+          <div class="mrow"><span class="k2">評価値（低いほど良い）</span><span class="v" id="mCost">—</span></div>
+        </div>
+        <div class="mcard">
+          <div class="lab" style="margin-bottom:8px">確認した条件</div>
+          <div id="runChecks"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 手順3 ============ -->
+  <section id="scRes" hidden>
+    <div class="reshead">
+      <div>
+        <h2 id="resTitle">—</h2>
+        <div class="s">ホテルかなろあ ／ 自動作成 — 手直しできます</div>
+      </div>
+      <div class="r">
+        <div class="seg" id="viewSeg">
+          <button data-v="sheet" class="on">シフト表</button>
+          <button data-v="tl">日別タイムライン</button>
+        </div>
+        <button class="btn" id="btnRedo">別の案で組み直す</button>
+        <button class="btn" id="btnBack1">条件を変える</button>
+        <button class="btn primary" id="btnCopy">スプレッドシートにコピー</button>
+        <button class="btn" id="btnCsv">CSV</button>
+      </div>
+    </div>
+
+    <div id="headline" class="headline good"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div id="sheetView">
+      <div class="card">
+        <div class="card-h">
+          <h2>シフト表</h2>
+          <span class="sub">セルをドラッグして入れ替え／クリックで直接変更</span>
+          <div class="r">
+            <label class="inline"><input type="checkbox" id="showTimes"> 開始時刻で見る</label>
+            <label class="inline"><input type="checkbox" id="bigText"> 文字を大きく</label>
+            <label class="inline"><input type="checkbox" id="showLegend" checked> 凡例</label>
+          </div>
+        </div>
+        <div class="pad" id="legendPad"><div id="legend" class="legend"></div></div>
+        <div class="sheetwrap"><div id="shiftGrid"></div></div>
+      </div>
+
+      <div class="two">
+        <div class="card">
+          <div class="card-h"><h2>申し送り</h2><span class="sub">直したほうがよい点と、その場で直せる操作</span></div>
+          <div class="pad" style="padding-top:4px"><div id="notes"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>個人別サマリー</h2><span class="sub">出勤日数 / 休み / 最大連勤</span></div>
+          <div class="pad" style="padding-top:8px"><div id="persum"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tlView" hidden>
+      <div class="card">
+        <div class="card-h"><h2>日を選ぶ</h2><span class="sub">赤い日は人が足りていません</span></div>
+        <div class="pad" style="padding-top:10px"><div class="daystrip" id="daystrip"></div></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-h">
+          <h2 id="tlTitle">—</h2>
+          <span class="sub" id="tlSub">—</span>
+        </div>
+        <div class="pad">
+          <div class="tlwrap"><div id="timeline"></div></div>
+          <p class="hint">一番下の行は、その時間帯に館内にいる人数です。中抜けのパターン（C・D・E・H）は、休憩の時間帯が空きます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="cellPopup" class="popup hidden"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
