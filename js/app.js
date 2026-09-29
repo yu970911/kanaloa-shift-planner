@@ -10,6 +10,7 @@ import { importFormCsv, importMessages, guessColumns, parseCSV, parseRoomsInput,
 import { renderShiftImage } from './image.js';
 import { periodRange, deadlineOf, deadlineStatus, deadlineMessage, nextPeriod, buildNotice, fmtDate } from './period.js';
 import { loadSync, saveSync, isValidSheetUrl, isSyncReady, callSheet, buildSheetTable, stateForSheet, encodeSetup, decodeSetup } from './sheets.js';
+import * as account from './account.js';
 
 const STORE_KEY = 'kanaloa-shift-planner-v1';
 const $ = (s) => document.querySelector(s);
@@ -289,6 +290,243 @@ function openCalendar(m) {
 }
 function closeModal() { $('#mask').classList.remove('show'); }
 $('#mask').addEventListener('click', (e) => { if (e.target === $('#mask')) closeModal(); });
+
+/* ---------------- ログイン・クラウド保存・履歴 ---------------- */
+// currentAccount … ログイン中のメールアドレス（未ログインなら null）。ページを開くたびに /api/auth/me で確認する
+let currentAccount = null;
+
+function renderAccountButton() {
+  const b = $('#btnAccount');
+  b.textContent = currentAccount ? currentAccount : 'ログイン';
+  b.title = currentAccount
+    ? `${currentAccount} でログイン中。クリックでクラウド保存・履歴・ログアウト`
+    : 'ログインすると、クラウドに保存して他のパソコンと共有したり、過去に組んだシフトの履歴を見たり、元に戻したりできます';
+}
+
+async function initAccount() {
+  try { const u = await account.me(); currentAccount = u ? u.email : null; }
+  catch (e) { currentAccount = null; }
+  renderAccountButton();
+}
+
+function openAccountModal() {
+  if (currentAccount) openAccountPanel(); else openLoginForm();
+}
+
+/** 未ログイン：ログイン／新規登録フォーム */
+function openLoginForm(prefillEmail) {
+  const modal = $('#modal');
+  modal.innerHTML = '';
+  let mode = 'login'; // 'login' | 'signup'
+
+  const mh = el('div', 'mh');
+  const t = el('div');
+  const h2 = el('h2', '', 'ログイン');
+  t.appendChild(h2);
+  t.appendChild(el('div', 'sub', 'クラウドに保存すると、他のパソコンとデータを共有したり、過去のシフト案を見返したりできます。今のブラウザ保存はこれまでどおり続きます。'));
+  mh.appendChild(t);
+  const x = el('button', 'btn sm x', '閉じる');
+  x.addEventListener('click', closeModal);
+  mh.appendChild(x);
+  modal.appendChild(mh);
+
+  const body = el('div', 'pad');
+  const err = el('div', 'note bad', '');
+  err.hidden = true;
+  err.style.marginBottom = '10px';
+
+  const emailInp = el('input'); emailInp.type = 'email'; emailInp.placeholder = 'メールアドレス'; emailInp.autocomplete = 'username';
+  emailInp.value = prefillEmail || '';
+  const pwInp = el('input'); pwInp.type = 'password'; pwInp.placeholder = 'パスワード（8文字以上）'; pwInp.autocomplete = 'current-password';
+  const form = el('div', 'row');
+  form.style.flexDirection = 'column';
+  form.style.alignItems = 'stretch';
+  form.style.gap = '8px';
+  [emailInp, pwInp].forEach((i) => { i.style.width = '100%'; i.style.boxSizing = 'border-box'; });
+  form.appendChild(emailInp);
+  form.appendChild(pwInp);
+
+  const submitBtn = el('button', 'btn primary', 'ログイン');
+  const switchLine = el('p', 'hint');
+  const switchBtn = el('button', 'btn sm', '新しく登録する');
+  switchLine.appendChild(document.createTextNode('アカウントが無い場合は　'));
+  switchLine.appendChild(switchBtn);
+
+  const setMode = (m) => {
+    mode = m;
+    h2.textContent = m === 'login' ? 'ログイン' : '新しく登録';
+    submitBtn.textContent = m === 'login' ? 'ログイン' : '登録する';
+    pwInp.autocomplete = m === 'login' ? 'current-password' : 'new-password';
+    switchLine.replaceChildren(
+      document.createTextNode(m === 'login' ? 'アカウントが無い場合は　' : 'すでにアカウントがある場合は　'),
+    );
+    switchBtn.textContent = m === 'login' ? '新しく登録する' : 'ログインする';
+    switchLine.appendChild(switchBtn);
+  };
+  switchBtn.addEventListener('click', () => setMode(mode === 'login' ? 'signup' : 'login'));
+
+  submitBtn.addEventListener('click', async () => {
+    err.hidden = true;
+    const email = emailInp.value.trim();
+    const pw = pwInp.value;
+    if (!email || !pw) { err.hidden = false; err.textContent = 'メールアドレスとパスワードを入れてください'; return; }
+    submitBtn.disabled = true;
+    submitBtn.textContent = mode === 'login' ? 'ログイン中…' : '登録中…';
+    try {
+      const u = mode === 'login' ? await account.login(email, pw) : await account.signup(email, pw);
+      currentAccount = u.email;
+      renderAccountButton();
+      closeModal();
+      toast(mode === 'login' ? 'ログインしました' : '登録してログインしました');
+    } catch (e) {
+      err.hidden = false;
+      err.textContent = e.message;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = mode === 'login' ? 'ログイン' : '登録する';
+    }
+  });
+  [emailInp, pwInp].forEach((i) => i.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click(); }));
+
+  body.appendChild(err);
+  body.appendChild(form);
+  const row = el('div', 'row');
+  row.appendChild(submitBtn);
+  body.appendChild(row);
+  body.appendChild(switchLine);
+  modal.appendChild(body);
+  $('#mask').classList.add('show');
+  setTimeout(() => emailInp.focus(), 0);
+}
+
+/** ログイン中：クラウド保存・読み込み・履歴（元に戻す） */
+function openAccountPanel() {
+  const modal = $('#modal');
+  modal.innerHTML = '';
+  const mh = el('div', 'mh');
+  const t = el('div');
+  t.appendChild(el('h2', '', currentAccount));
+  t.appendChild(el('div', 'sub', 'クラウドに保存したデータは、このメールアドレスでログインしたどのパソコンからでも読み書きできます'));
+  mh.appendChild(t);
+  const x = el('button', 'btn sm x', '閉じる');
+  x.addEventListener('click', closeModal);
+  mh.appendChild(x);
+  modal.appendChild(mh);
+
+  const body = el('div', 'pad');
+  const row = el('div', 'row');
+  const saveBtn = el('button', 'btn primary', 'クラウドに保存');
+  saveBtn.title = '今このブラウザにある内容（希望休・予約客室数・名簿・組んだシフト）を、クラウドに保存します';
+  const loadBtn = el('button', 'btn', 'クラウドから読み込む');
+  loadBtn.title = 'クラウドに保存されている最新の内容を読み込みます（今このブラウザにある内容は上書きされます）';
+  const logoutBtn = el('button', 'btn sm', 'ログアウト');
+  row.appendChild(saveBtn); row.appendChild(loadBtn); row.appendChild(logoutBtn);
+  body.appendChild(row);
+
+  const status = el('p', 'hint', '');
+  body.appendChild(status);
+
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true; saveBtn.textContent = '保存中…';
+    try {
+      const label = `${state.year}年${period().title}`;
+      await account.saveCloud(state, label);
+      status.textContent = `保存しました（${new Date().toLocaleString('ja-JP')}）`;
+      toast('クラウドに保存しました');
+      renderHistoryList();
+    } catch (e) {
+      status.textContent = e.message;
+    } finally {
+      saveBtn.disabled = false; saveBtn.textContent = 'クラウドに保存';
+    }
+  });
+  loadBtn.addEventListener('click', async () => {
+    if (!confirm('クラウドの最新の内容を読み込みます。\n今このブラウザにある内容は上書きされます。よろしいですか？')) return;
+    loadBtn.disabled = true; loadBtn.textContent = '読み込み中…';
+    try {
+      const res = await account.loadCloud();
+      if (!res.state) { status.textContent = 'クラウドにはまだ保存されていません'; return; }
+      applyLoadedState(res.state);
+      status.textContent = '読み込みました';
+      toast('クラウドの内容を読み込みました');
+    } catch (e) {
+      status.textContent = e.message;
+    } finally {
+      loadBtn.disabled = false; loadBtn.textContent = 'クラウドから読み込む';
+    }
+  });
+  logoutBtn.addEventListener('click', async () => {
+    try { await account.logout(); } catch (e) { /* ログアウトはエラーでも見た目上は抜ける */ }
+    currentAccount = null;
+    renderAccountButton();
+    closeModal();
+    toast('ログアウトしました');
+  });
+
+  body.appendChild(el('h3', '', '履歴（過去にAIで作ったシフト案）'));
+  body.appendChild(el('p', 'hint', '「クラウドに保存」するたびに1件残ります。選ぶと、その時点の内容に戻せます（今の内容も履歴に残るので、間違えても戻せます）。'));
+  const list = el('div');
+  list.id = 'historyList';
+  body.appendChild(list);
+
+  modal.appendChild(body);
+  $('#mask').classList.add('show');
+  renderHistoryList();
+}
+
+async function renderHistoryList() {
+  const host = $('#historyList');
+  if (!host) return;
+  host.innerHTML = '読み込み中…';
+  try {
+    const { items } = await account.listHistory();
+    host.innerHTML = '';
+    if (!items.length) { host.appendChild(el('p', 'hint', 'まだありません。')); return; }
+    const ul = el('ul', 'check-list');
+    for (const it of items) {
+      const li = el('li');
+      const when = new Date(it.savedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const what = it.year && it.month ? `${it.year}年${it.month}月${it.period === 'second' ? '後半' : '前半'}` : '';
+      li.appendChild(el('span', 'check-who', when));
+      li.appendChild(el('span', 'check-why', [what, it.label].filter(Boolean).join(' ／ ')));
+      const b = el('button', 'btn sm', 'この内容に戻す');
+      b.addEventListener('click', async () => {
+        if (!confirm(`${when} の内容に戻します。今の内容は履歴に残ります。よろしいですか？`)) return;
+        b.disabled = true; b.textContent = '戻しています…';
+        try {
+          const res = await account.restoreHistory(it.id);
+          applyLoadedState(res.state);
+          toast('その時点の内容に戻しました');
+          closeModal();
+        } catch (e) {
+          toast(e.message, 5000);
+        } finally {
+          b.disabled = false; b.textContent = 'この内容に戻す';
+        }
+      });
+      li.appendChild(b);
+      ul.appendChild(li);
+    }
+    host.appendChild(ul);
+  } catch (e) {
+    host.innerHTML = '';
+    host.appendChild(el('p', 'hint', e.message));
+  }
+}
+
+/** クラウド／履歴から読み込んだ保存データを、今の画面に反映する（ファイルから戻す、と同じ流れ） */
+function applyLoadedState(loaded) {
+  if (!loaded || !Array.isArray(loaded.members) || typeof loaded.months !== 'object') {
+    toast('データの形が正しくありません', 5000);
+    return;
+  }
+  const fixed = migrateRules(migrateRoster(loaded));
+  state = mergeState(fixed);
+  save();
+  syncMonthInputs();
+  tlDay = null;
+  goStep(hasGrid() ? 3 : 1);
+}
 
 function renderStreakWishes() {
   const host = $('#streakWishes');
@@ -2331,6 +2569,9 @@ bindOptions();
 bindSync();
 $('#btnSyncLink').addEventListener('click', copySetupLink);
 $('#btnLoadSheet').hidden = !isSyncReady();
+$('#btnAccount').addEventListener('click', openAccountModal);
+renderAccountButton();
+initAccount();
 setImportMode('msg');
 goStep(hasGrid() ? 3 : 1);
 applySetupLink();
