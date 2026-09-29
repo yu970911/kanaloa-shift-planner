@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>シフト自動作成 | ホテルかなろあ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="logo">
+      <div class="mark">KA</div>
+      <div><div class="nm">SHIFT PLANNER</div><div class="sub">ホテルかなろあ</div></div>
+    </div>
+    <div class="store" id="storeLabel">渡嘉敷島 本館</div>
+    <div class="spacer"></div>
+    <div class="monthpick">
+      <button id="prevMonth" class="btn sm" title="前の月">◀</button>
+      <input type="number" id="year" min="2024" max="2035" step="1">
+      <span>年</span>
+      <input type="number" id="month" min="1" max="12" step="1">
+      <span>月</span>
+      <button id="nextMonth" class="btn sm" title="次の月">▶</button>
+    </div>
+    <button class="btn sm" id="btnLoadSheet" hidden title="スプレッドシートに反映された最新のデータを、このパソコンに読み込みます">最新を読み込む</button>
+    <button class="btn sm" id="btnExport" title="希望休・予約客室数・名簿・組んだシフトを、まとめて1つのファイルに保存します。別のパソコンでも、このファイルから戻せます">ファイルに保存</button>
+    <button class="btn sm" id="btnImport" title="「ファイルに保存」で作ったファイルを読み込みます">ファイルから戻す</button>
+    <input type="file" id="backupFile" accept=".json,application/json" hidden>
+    <span class="saved" id="saveState" title="入力するたび、このブラウザに自動で保存しています。別のパソコンやブラウザには引き継がれないので、移すときは「ファイルに保存」を使ってください"></span>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <button class="step on" data-s="1"><div class="no">1</div><div><div class="t">希望を集める</div><div class="d" id="stepSub1">—</div></div></button>
+    <button class="step" data-s="2"><div class="no">2</div><div><div class="t">シフトを組む</div><div class="d" id="stepSub2">条件を満たす配置を探す</div></div></button>
+    <button class="step" data-s="3"><div class="no">3</div><div><div class="t">確認して仕上げる</div><div class="d" id="stepSub3">手直ししてコピー</div></div></button>
+  </div>
+
+  <!-- 15日ごとの期間と、完成の締切 -->
+  <div class="deadline" id="deadlineBar">
+    <div class="dl-tabs" id="periodTabs"></div>
+    <div class="dl-msg" id="deadlineMsg"></div>
+    <label class="dl-set" title="期間の開始日の何日前までに、シフトを完成させて通知するか">締切は開始の<input type="number" id="dlDays" min="0" max="14" class="num-input">日前</label>
+  </div>
+
+  <!-- ============ 手順1 ============ -->
+  <section id="scCollect">
+    <div class="grid1">
+      <div>
+        <div class="card">
+          <div class="card-h">
+            <h2>希望休の提出状況</h2>
+            <span class="sub" id="collectSub">—</span>
+            <div class="r">
+              <button class="btn sm" id="btnClearReq">この月の希望休を消す</button>
+            </div>
+          </div>
+          <div class="pad" style="padding-top:4px">
+            <div style="overflow:auto">
+              <table class="roster">
+                <thead><tr>
+                  <th style="width:190px">スタッフ</th>
+                  <th style="width:150px">担当</th>
+                  <th style="width:88px">提出</th>
+                  <th>希望休</th>
+                </tr></thead>
+                <tbody id="rosterBody"></tbody>
+              </table>
+            </div>
+            <p class="stripnote">行をクリックすると、その人の希望休カレンダーが開きます。帯の色 ― <b style="color:var(--accent)">休</b> 希望休 ／ <b style="color:var(--warn)">特</b> 特別休暇 ／ <b style="color:var(--bad)">✖</b> 不在・NG</p>
+            <div id="streakWishes" hidden></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>希望休を取り込む</h2>
+            <div class="r">
+              <div class="seg" id="importMode">
+                <button data-mode="msg" class="on">LINE・メッセージ</button>
+                <button data-mode="csv">Googleフォーム（CSV）</button>
+              </div>
+            </div>
+          </div>
+          <div class="pad">
+            <p class="hint" id="hintMsg">届いたメッセージをそのまま貼り付けてください。<b>名前と日にちが入っていれば形式は問いません</b>。苗字だけ・下の名前だけでも照合します。「10日まで出勤」「3連休が取りたい」「13日は早番希望」のような書き方にも対応します。日にちとして読ませたくない伝言は、行の先頭に ※ を付けてください。</p>
+            <p class="hint" id="hintCsv" hidden>回答スプレッドシートを「ファイル ▸ ダウンロード ▸ カンマ区切り形式(.csv)」で保存し、そのファイルを選ぶか、中身を貼り付けてください。</p>
+            <div class="row" id="rowCsv" hidden>
+              <input type="file" id="csvFile" accept=".csv,text/csv">
+              <span class="or">または</span>
+              <button id="pasteSample" class="btn sm">記入例を入れる</button>
+            </div>
+            <div class="row" id="rowMsg">
+              <button id="pasteMsgSample" class="btn sm">記入例を入れる</button>
+            </div>
+            <textarea id="csvText" rows="5" placeholder="ここにメッセージを貼り付け"></textarea>
+            <div id="csvMapping" class="row"></div>
+            <div class="row">
+              <button id="importCsv" class="btn primary">取り込む</button>
+              <label class="inline"><input type="checkbox" id="csvReplace"> 取り込む前に今月の希望休を消す</label>
+            </div>
+            <div id="csvResult"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>予約客室数</h2>
+            <span class="sub">入れた数に応じて必要人数が変わります</span>
+            <div class="r">
+              <label class="inline">全客室数 <input type="number" id="totalRooms" min="1" max="99" class="num-input"> 室</label>
+              <label class="inline">空欄の日の既定値 <input type="number" id="defaultRooms" min="0" max="99" class="num-input"> 室</label>
+            </div>
+          </div>
+          <div class="pad">
+            <div class="row">
+              <button id="applyRoomsPaste" class="btn sm">貼り付けから取り込む</button>
+              <label class="inline"><input type="checkbox" id="roomsIsStock" checked> ねっぱんの残室数を貼る（予約客室数＝全客室数−残室数）</label>
+              <span class="or">この期間の1日目から順に数値を並べるか、「3&#9;12」のように日付と数の組で</span>
+            </div>
+            <textarea id="roomsPaste" rows="2" placeholder="例: 8 8 12 24 24 16 …"></textarea>
+            <div id="roomsGrid" class="rooms-grid"></div>
+          </div>
+        </div>
+
+        <div class="card" id="reqCard">
+          <div class="card-h">
+            <h2>リクエスト（日ごとの指示）</h2>
+            <span class="sub">お祭り・超多忙の日など、その日のやり方を文章で伝える</span>
+            <div class="r"><button class="btn sm" id="btnClearDayReq" title="この月の「全員出勤」「清掃の人数」「焼き鳥屋の人数」「日ごとのメモ」を消します（予約客室数と休館は消しません）">日ごとの指示を全部消す</button></div>
+          </div>
+          <div class="pad">
+            <p class="hint">例：「13日は超多忙なので全員出勤」「9、10、11日は満室なので全員出勤」「2日は清掃4人」「20日は焼き鳥屋は休み」「16〜18日はお祭りなので全員出勤、清掃4人」。
+              1行に何件書いてもかまいません。個人の希望休（「宮平 13日は休み」など）は、上の「希望休を取り込む」に入れてください。</p>
+            <textarea id="dayReqText" rows="3" placeholder="ここにリクエストを書く（Slackの文章を貼ってもOK）"></textarea>
+            <div class="row"><button class="btn primary" id="btnDayReq">読み取って反映</button></div>
+            <div id="dayReqResult"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h2>詳細設定</h2>
+            <span class="sub">スタッフ名簿・必要人員のルール・全体の条件</span>
+            <div class="r"><button class="btn sm" id="btnToggleAdv">開く</button></div>
+          </div>
+          <div class="pad" id="advBody" hidden>
+            <h3>スタッフ</h3>
+            <p class="hint">担当と対応パターンが、その人に割り当て可能な仕事を決めます。「常勤（記号なし）」は出勤日を空欄、休みだけ記号で出します。</p>
+            <div class="row">
+              <button id="addMember" class="btn sm">スタッフを追加</button>
+              <button id="resetMembers" class="btn sm danger">初期値に戻す</button>
+            </div>
+            <div style="overflow:auto"><div id="staffTable"></div></div>
+
+            <h3>必要人員のルール</h3>
+            <p class="hint">必要人数 ＝ 基本人数 ＋ (予約客室数 ÷ 加算間隔) ／ 上限まで。既定値は R8 7月・8月の実績（1日 7〜10名）に合わせています。</p>
+            <div style="overflow:auto"><div id="rulesTable"></div></div>
+            <div class="row">
+              <button id="addRule" class="btn sm">枠を追加</button>
+              <button id="resetRules" class="btn sm danger">初期値に戻す</button>
+            </div>
+            <div id="rulesPreview"></div>
+
+            <h3>労働条件</h3>
+            <p class="hint">労働時間・休日の上限は<b>労働基準法（全国共通）</b>で決まっていて、沖縄県独自の基準はありません。ここに入れた条件は、シフトを組むときに<b>必ず守ります</b>（破る配置は作りません）。</p>
+            <div class="labor">
+              <div class="labor-row">
+                <div class="labor-k">労働時間の数え方</div>
+                <div class="labor-v">
+                  <div class="seg" id="laborMode">
+                    <button data-mode="monthly">1か月単位の変形労働時間制</button>
+                    <button data-mode="weekly">週ごとに数える</button>
+                  </div>
+                  <p class="hint" id="laborModeHint"></p>
+                </div>
+              </div>
+              <div class="labor-row">
+                <div class="labor-k">週の上限時間</div>
+                <div class="labor-v">
+                  <label class="inline"><input type="number" id="laborWeekly" min="1" max="60" class="num-input"> 時間</label>
+                  <p class="hint">通常は40時間。常時10人未満の旅館・飲食店だけ44時間の特例があります（かなろあは対象外の可能性が高いです）。</p>
+                </div>
+              </div>
+              <div class="labor-row" id="laborWeekStartRow">
+                <div class="labor-k">週の始まり</div>
+                <div class="labor-v"><select id="laborWeekStart"></select></div>
+              </div>
+              <div class="labor-row">
+                <div class="labor-k">月の休日数</div>
+                <div class="labor-v">
+                  <label class="inline">社員 <input type="number" id="laborOffShain" min="0" max="20" class="num-input"> 日以上</label>
+                  <label class="inline">PA <input type="number" id="laborOffPA" min="0" max="20" class="num-input"> 日以上</label>
+                  <p class="hint">会社の就業規則で決めている休日数です。これとは別に、法定休日（毎週1日以上）は必ず確保します。役員は労働時間の上限の対象外です。</p>
+                </div>
+              </div>
+              <div class="labor-row">
+                <div class="labor-k">連勤の上限</div>
+                <div class="labor-v">
+                  <label class="inline"><input type="number" id="optMaxConsecutive" min="1" max="6" class="num-input"> 日</label>
+                  <p class="hint">7連勤は法定休日（毎週1日）に反するため、6日までしか設定できません。</p>
+                </div>
+              </div>
+            </div>
+
+            <h3 id="syncSection">スプレッドシート連携</h3>
+            <p class="hint">シフトを、社員みんなが見られるGoogleスプレッドシートに書き出します。最初に1回だけ、スプレッドシート側に連携用のスクリプトを入れてください。</p>
+            <div class="labor">
+              <div class="labor-row">
+                <div class="labor-k">ウェブアプリのURL</div>
+                <div class="labor-v">
+                  <input type="url" id="syncUrl" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:260px">
+                </div>
+              </div>
+              <div class="labor-row">
+                <div class="labor-k">合言葉</div>
+                <div class="labor-v">
+                  <input type="password" id="syncKey" autocomplete="off" style="width:200px">
+                  <label class="inline"><input type="checkbox" id="syncKeyShow"> 表示</label>
+                  <p class="hint">スクリプトの1行目 KEY に書いたものと同じにします。URLと合言葉は、このパソコンのブラウザにだけ保存されます。</p>
+                </div>
+              </div>
+              <div class="labor-row">
+                <div class="labor-k">接続</div>
+                <div class="labor-v">
+                  <button class="btn sm primary" id="btnSyncTest">保存して接続テスト</button>
+                  <button class="btn sm" id="btnSyncLink" title="URLと合言葉が入ったリンクを作ります。他のパソコンでは、このリンクを開くだけで設定が終わります">設定リンクをコピー</button>
+                  <span class="hint" id="syncStatus" style="width:auto;margin:0">未設定</span>
+                </div>
+              </div>
+            </div>
+            <ol class="flow">
+              <li>シフトを共有したいスプレッドシートを開き、メニュー「拡張機能 → Apps Script」</li>
+              <li>中身を全部消して、<button class="btn sm" id="btnCopyGas">連携用スクリプトをコピー</button> で写したものを貼り付け</li>
+              <li>1行目の <code>KEY</code> を好きな合言葉に書き換えて保存</li>
+              <li>「デプロイ → 新しいデプロイ → 種類：ウェブアプリ」。実行ユーザーは「自分」、アクセスできるユーザーは「全員」→ デプロイ → 承認</li>
+              <li>表示された「ウェブアプリのURL」と合言葉を、上の欄に入れて「保存して接続テスト」</li>
+              <li>ほかのパソコンには「設定リンクをコピー」で作ったリンクを送る。開くだけで設定が入ります（合言葉が入っているので社内だけに）</li>
+            </ol>
+
+            <h3>探索</h3>
+            <div class="opts">
+              <label>試行回数 <input type="number" id="optIterations" min="10" max="3000" step="10"> 回</label>
+              <label class="inline"><input type="checkbox" id="optKeepPattern"> 前日と同じパターンを優先する</label>
+            </div>
+
+            <h3>勤務パターン</h3>
+            <div id="patternTable"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-h"><h2>集計</h2></div>
+          <div class="pad">
+            <div class="ringwrap">
+              <div class="ring">
+                <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+                  <circle cx="42" cy="42" r="35" fill="none" stroke="var(--line2)" stroke-width="8"/>
+                  <circle id="ringArc" cx="42" cy="42" r="35" fill="none" stroke="var(--ok)" stroke-width="8"
+                    stroke-linecap="round" stroke-dasharray="219.9" stroke-dashoffset="219.9"
+                    style="transition:stroke-dashoffset .6s cubic-bezier(.3,.9,.3,1)"/>
+                </svg>
+                <div class="val"><div><b id="ringNum">—</b><i>提出済み</i></div></div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="sumline"><span>今月の必要枠</span><b id="sNeed">—<em>枠</em></b></div>
+                <div class="sumline"><span>集まった希望休</span><b id="sWish">—<em>日</em></b></div>
+                <div class="sumline"><span>連休の希望</span><b id="sStreak">—<em>件</em></b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="launch">
+      <div>
+        <div class="lt" id="launchTitle">—</div>
+        <div class="ld" id="launchNote">—</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn go" id="btnRun">シフトを組む</button>
+    </div>
+  </section>
+
+  <!-- ============ 手順2 ============ -->
+  <section id="scRun" hidden>
+    <div class="runhead">
+      <span class="pulse" id="runPulse"></span>
+      <div><div class="h" id="runTitle">配置を探しています</div><div class="s" id="runSub">—</div></div>
+      <div style="margin-left:auto"><button class="btn" id="btnRunStop">中断する</button></div>
+    </div>
+    <div class="rungrid">
+      <div>
+        <div class="card">
+          <div class="card-h"><h2>探索の進み</h2><span class="sub">数字はすべて実際の探索結果です</span></div>
+          <div class="pad">
+            <div class="progwrap"><div class="progbar" id="progBar"></div></div>
+            <div class="runstat"><span id="progLeft">—</span><span id="progRight">—</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-h"><h2>良くなった記録</h2><span class="sub">より良い配置が見つかった試行だけ残ります</span></div>
+          <div class="runlog" id="runLog" style="border:none;box-shadow:none;border-radius:0 0 var(--r) var(--r)"></div>
+        </div>
+      </div>
+      <div>
+        <div class="mcard">
+          <div class="lab">試した配置</div>
+          <div class="bignum" id="mTried">0</div>
+          <div class="mrow"><span class="k2">人が足りない枠</span><span class="v" id="mShort">—</span></div>
+          <div class="mrow"><span class="k2">枠の充足率</span><span class="v" id="mFill">—</span></div>
+          <div class="mrow"><span class="k2">月の総工数</span><span class="v" id="mHours">—</span></div>
+          <div class="mrow"><span class="k2">評価値（低いほど良い）</span><span class="v" id="mCost">—</span></div>
+        </div>
+        <div class="mcard">
+          <div class="lab" style="margin-bottom:8px">確認した条件</div>
+          <div id="runChecks"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 手順3 ============ -->
+  <section id="scRes" hidden>
+    <div class="reshead">
+      <div>
+        <h2 id="resTitle">—</h2>
+        <div class="s">ホテルかなろあ ／ 自動作成 — 手直しできます</div>
+      </div>
+      <div class="r">
+        <div class="seg" id="viewSeg">
+          <button data-v="person">個人別</button>
+          <button data-v="sheet" class="on">シフト表</button>
+          <button data-v="tl">日別</button>
+        </div>
+        <button class="btn" id="btnRedo">別の案で組み直す</button>
+        <button class="btn" id="btnBack1">条件を変える</button>
+      </div>
+    </div>
+
+    <div id="headline" class="headline good"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card notify" id="notifyCard">
+      <div class="card-h">
+        <h2>スタッフに通知する</h2>
+        <span class="sub" id="notifySub">—</span>
+        <div class="r"><button class="btn primary" id="btnConfirm">このシフトで確定する</button></div>
+      </div>
+      <div class="pad">
+        <p class="hint" id="notifyHint"></p>
+        <div class="share-grid">
+          <div class="share-item">
+            <div class="share-t">全員への連絡（SlackやLINEに貼る）</div>
+            <textarea id="noticeCommon" class="notice" rows="6" readonly></textarea>
+            <div class="row">
+              <button class="btn" id="btnCopyCommon">文面をコピー</button>
+              <button class="btn" id="btnNoticeImage">この期間の画像を作る</button>
+            </div>
+            <div class="share-d">画像はSlackやLINEに貼れます。文面と画像を続けて送ってください。</div>
+          </div>
+          <div class="share-item">
+            <div class="share-t">個人ごとの勤務予定</div>
+            <select id="noticePersonSel" class="notice-sel"></select>
+            <textarea id="noticePerson" class="notice" rows="8" readonly></textarea>
+            <div class="row">
+              <button class="btn" id="btnCopyPerson">この人の分をコピー</button>
+              <button class="btn" id="btnCopyAll">全員分をまとめてコピー</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card share">
+      <div class="card-h">
+        <h2>みんなに共有する</h2>
+        <span class="sub">できあがったシフトを、社員が見られる形にして出します</span>
+      </div>
+      <div class="share-grid">
+        <div class="share-item">
+          <div class="share-t">スプレッドシートに反映</div>
+          <div class="share-d" id="sheetStatus">フロントのパソコンで開いているスプレッドシートに、最新のシフトを書き込みます。</div>
+          <div class="row">
+            <button class="btn primary" id="btnPublish">スプレッドシートに反映</button>
+            <a class="btn sm" id="sheetLink" target="_blank" rel="noopener" hidden>開く</a>
+          </div>
+        </div>
+        <div class="share-item">
+          <div class="share-t">画像で保存</div>
+          <div class="share-d">この期間（15日ぶん前後）を1枚の画像にします。LINEで送る・掲示するときに。</div>
+          <div class="row"><button class="btn" id="btnImage">画像を作る</button></div>
+        </div>
+        <div class="share-item">
+          <div class="share-t">今のシフト表に貼る</div>
+          <div class="share-d">いつものスプレッドシートに、手で貼り付けるとき。</div>
+          <div class="row">
+            <button class="btn" id="btnCopy">表をコピー</button>
+            <button class="btn" id="btnCsv">CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sheetView">
+      <div class="card">
+        <div class="card-h">
+          <h2>シフト表</h2>
+          <span class="sub">セルをドラッグして入れ替え／クリックで直接変更</span>
+          <div class="r">
+            <label class="inline"><input type="checkbox" id="showTimes"> 開始時刻で見る</label>
+            <label class="inline"><input type="checkbox" id="bigText"> 文字を大きく</label>
+            <label class="inline"><input type="checkbox" id="showLegend" checked> 凡例</label>
+          </div>
+        </div>
+        <div class="pad" id="legendPad"><div id="legend" class="legend"></div></div>
+        <div class="sheetwrap"><div id="shiftGrid"></div></div>
+      </div>
+
+      <div class="two">
+        <div class="card">
+          <div class="card-h"><h2>申し送り</h2><span class="sub">直したほうがよい点と、その場で直せる操作</span></div>
+          <div class="pad" style="padding-top:4px"><div id="notes"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>個人別サマリー</h2><span class="sub">出勤日数 / 休み / 最大連勤</span></div>
+          <div class="pad" style="padding-top:8px"><div id="persum"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="personView" hidden>
+      <div class="card">
+        <div class="card-h">
+          <h2>だれのシフトを見ますか</h2>
+          <span class="sub">名前をえらぶと、その人の1か月が縦に並びます</span>
+        </div>
+        <div class="pad" style="padding-top:10px"><div class="pchips" id="personChips"></div></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-h">
+          <h2 id="pTitle">—</h2>
+          <span class="sub" id="pSub">—</span>
+        </div>
+        <div class="pad" style="padding-top:8px"><div id="personList"></div></div>
+      </div>
+    </div>
+
+    <div id="tlView" hidden>
+      <div class="card">
+        <div class="card-h"><h2>日を選ぶ</h2><span class="sub">赤い日は人が足りていません</span></div>
+        <div class="pad" style="padding-top:10px"><div class="daystrip" id="daystrip"></div></div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-h">
+          <h2 id="tlTitle">—</h2>
+          <span class="sub" id="tlSub">—</span>
+        </div>
+        <div class="pad">
+          <div class="tlwrap"><div id="timeline"></div></div>
+          <p class="hint">一番下の行は、その時間帯に館内にいる人数です。中抜けのパターン（C・D・E・H）は、休憩の時間帯が空きます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="cellPopup" class="popup hidden"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
