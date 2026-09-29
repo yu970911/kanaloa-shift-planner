@@ -16,7 +16,8 @@ export async function readJSON(key) {
 
 export async function writeJSON(key, value) {
   const body = JSON.stringify(value);
-  await put(key, body, { access: 'private', addRandomSuffix: false, contentType: 'application/json; charset=utf-8' });
+  // 同じキー（例: current.json）に毎回保存し直すので、上書きを許可する
+  await put(key, body, { access: 'private', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json; charset=utf-8' });
 }
 
 export async function deleteBlob(key) {
