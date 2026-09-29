@@ -1,12 +1,12 @@
 // 今のデータの読み書き。POSTのたびに「履歴」にも1件残す（＝過去の生成例・戻る機能のもと）。
-import { sessionFromRequest } from './_lib/auth.js';
+import { sessionFromRequest, EMAIL_KEY_OF } from './_lib/auth.js';
 import { readJSON, writeJSON, listByPrefix, deleteBlob } from './_lib/blob.js';
 import { withErrors } from './_lib/wrap.js';
 
 const MAX_HISTORY = 200; // 1人あたりの履歴の上限（古い順に消す）
 
 function keyOf(email) {
-  return encodeURIComponent(email);
+  return EMAIL_KEY_OF(email);
 }
 
 export default withErrors(async function handler(req, res) {

@@ -9,9 +9,13 @@ const SESSION_DAYS = 30;
 export function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
-/** メールアドレスをBlobのキーに使える形にする（そのまま使うと "/" 等が無いので実質そのままでよいが、念のため） */
+/**
+ * メールアドレスをBlobのキーに使える形にする。
+ * encodeURIComponent（%40 等）だと、Vercel Blobの get() が list() と食い違って
+ * 「保存はできるが読み込めない」ことがあったため、記号を含まないハッシュ値にする。
+ */
 function emailKey(email) {
-  return encodeURIComponent(normalizeEmail(email));
+  return crypto.createHash('sha256').update(normalizeEmail(email)).digest('hex');
 }
 
 export function hashPassword(password) {

@@ -1,12 +1,12 @@
 // 一時的な調査用エンドポイント。原因が分かり次第、削除する。
 import { get, list } from '@vercel/blob';
-import { sessionFromRequest } from './_lib/auth.js';
+import { sessionFromRequest, EMAIL_KEY_OF } from './_lib/auth.js';
 import { withErrors } from './_lib/wrap.js';
 
 export default withErrors(async function handler(req, res) {
   const s = await sessionFromRequest(req);
   if (!s) return res.status(401).json({ error: 'not_logged_in' });
-  const k = encodeURIComponent(s.email);
+  const k = EMAIL_KEY_OF(s.email);
   const key = `data/${k}/current.json`;
 
   const listed = await list({ prefix: `data/${k}/` });
