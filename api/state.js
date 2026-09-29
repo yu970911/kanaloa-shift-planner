@@ -1,6 +1,7 @@
 // 今のデータの読み書き。POSTのたびに「履歴」にも1件残す（＝過去の生成例・戻る機能のもと）。
 import { sessionFromRequest } from './_lib/auth.js';
 import { readJSON, writeJSON, listByPrefix, deleteBlob } from './_lib/blob.js';
+import { withErrors } from './_lib/wrap.js';
 
 const MAX_HISTORY = 200; // 1人あたりの履歴の上限（古い順に消す）
 
@@ -8,7 +9,7 @@ function keyOf(email) {
   return encodeURIComponent(email);
 }
 
-export default async function handler(req, res) {
+export default withErrors(async function handler(req, res) {
   const s = await sessionFromRequest(req);
   if (!s) return res.status(401).json({ error: 'not_logged_in' });
   const k = keyOf(s.email);
@@ -36,4 +37,4 @@ export default async function handler(req, res) {
   }
 
   res.status(405).json({ error: 'method_not_allowed' });
-}
+});

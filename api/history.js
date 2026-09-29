@@ -1,8 +1,9 @@
 // 過去に保存した状態の一覧（新しい順）。中身は返さず、選ぶための最小限の情報だけ返す。
 import { sessionFromRequest } from './_lib/auth.js';
 import { listByPrefix, readJSON } from './_lib/blob.js';
+import { withErrors } from './_lib/wrap.js';
 
-export default async function handler(req, res) {
+export default withErrors(async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
   const s = await sessionFromRequest(req);
   if (!s) return res.status(401).json({ error: 'not_logged_in' });
@@ -24,4 +25,4 @@ export default async function handler(req, res) {
     };
   }));
   res.status(200).json({ items: detailed, total: items.length });
-}
+});

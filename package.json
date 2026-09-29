@@ -5,6 +5,6 @@
   "description": "ホテルかなろあ シフト自動作成（画面はサーバー不要。/api はログイン・クラウド保存・履歴のためのVercel Functions）",
   "type": "module",
   "dependencies": {
-    "@vercel/blob": "^0.27.1"
+    "@vercel/blob": "^2.8.0"
   }
 }

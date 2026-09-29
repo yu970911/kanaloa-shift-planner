@@ -1,8 +1,9 @@
 // 選んだ履歴を「今のデータ」に戻す（＝戻る機能）。戻す前の状態も履歴に残すので、やり直しがきく。
 import { sessionFromRequest } from './_lib/auth.js';
 import { readJSON, writeJSON } from './_lib/blob.js';
+import { withErrors } from './_lib/wrap.js';
 
-export default async function handler(req, res) {
+export default withErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   const s = await sessionFromRequest(req);
   if (!s) return res.status(401).json({ error: 'not_logged_in' });
@@ -24,4 +25,4 @@ export default async function handler(req, res) {
   }
   await writeJSON(`data/${k}/current.json`, snap.state);
   res.status(200).json({ state: snap.state });
-}
+});

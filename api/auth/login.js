@@ -1,6 +1,7 @@
 import { getUser, verifyPassword, createSession, setCookie, normalizeEmail } from '../_lib/auth.js';
+import { withErrors } from '../_lib/wrap.js';
 
-export default async function handler(req, res) {
+export default withErrors(async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   const { email, password } = req.body || {};
   const e = normalizeEmail(email);
@@ -11,4 +12,4 @@ export default async function handler(req, res) {
   const token = await createSession(e);
   setCookie(res, token);
   res.status(200).json({ email: e, name: user.name });
-}
+});
