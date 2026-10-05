@@ -56,6 +56,12 @@
 
   <!-- ============ 手順1 ============ -->
   <section id="scCollect">
+    <div class="sumbar" id="sumBar" aria-live="polite">
+      <span>提出 <b id="sSubmit">—</b></span>
+      <span>必要枠 <b id="sNeed">—</b></span>
+      <span>希望休 <b id="sWish">—</b></span>
+      <span>連休希望 <b id="sStreak">—</b></span>
+    </div>
     <div class="grid1">
       <div>
         <div class="card">
@@ -261,30 +267,6 @@
         </div>
       </div>
 
-      <div>
-        <div class="card">
-          <div class="card-h"><h2>集計</h2></div>
-          <div class="pad">
-            <div class="ringwrap">
-              <div class="ring">
-                <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
-                  <circle cx="42" cy="42" r="35" fill="none" stroke="var(--line2)" stroke-width="8"/>
-                  <circle id="ringArc" cx="42" cy="42" r="35" fill="none" stroke="var(--ok)" stroke-width="8"
-                    stroke-linecap="round" stroke-dasharray="219.9" stroke-dashoffset="219.9"
-                    style="transition:stroke-dashoffset .6s cubic-bezier(.3,.9,.3,1)"/>
-                </svg>
-                <div class="val"><div><b id="ringNum">—</b><i>提出済み</i></div></div>
-              </div>
-              <div style="flex:1;min-width:0">
-                <div class="sumline"><span>今月の必要枠</span><b id="sNeed">—<em>枠</em></b></div>
-                <div class="sumline"><span>集まった希望休</span><b id="sWish">—<em>日</em></b></div>
-                <div class="sumline"><span>連休の希望</span><b id="sStreak">—<em>件</em></b></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
     </div>
 
     <div class="launch">

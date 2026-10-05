@@ -689,12 +689,10 @@ function renderSummary() {
   const wish = members.reduce((a, m) => a + reqCount(m.id), 0);
   const streak = Object.values(mdata().streaks).filter((n) => n >= 2).length;
 
-  const pct = members.length ? submitted / members.length : 0;
-  $('#ringArc').setAttribute('stroke-dashoffset', String(219.9 * (1 - pct)));
-  $('#ringNum').textContent = `${submitted}/${members.length}`;
-  $('#sNeed').innerHTML = `${need}<em>枠</em>`;
-  $('#sWish').innerHTML = `${wish}<em>日</em>`;
-  $('#sStreak').innerHTML = `${streak}<em>件</em>`;
+  $('#sSubmit').textContent = `${submitted}/${members.length}名`;
+  $('#sNeed').textContent = `${need}枠`;
+  $('#sWish').textContent = `${wish}日`;
+  $('#sStreak').textContent = `${streak}件`;
   $('#stepSub1').textContent = `${state.year}年${period().title} ／ ${submitted}/${members.length}名`;
 }
 
