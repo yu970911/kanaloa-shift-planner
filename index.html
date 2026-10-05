@@ -32,6 +32,10 @@
     <button class="btn sm" id="btnExport" title="希望休・予約客室数・名簿・組んだシフトを、まとめて1つのファイルに保存します。別のパソコンでも、このファイルから戻せます">ファイルに保存</button>
     <button class="btn sm" id="btnImport" title="「ファイルに保存」で作ったファイルを読み込みます">ファイルから戻す</button>
     <input type="file" id="backupFile" accept=".json,application/json" hidden>
+    <span class="zoomctl" title="画面全体の文字・表の大きさを変えます（このブラウザに記憶されます）">
+      <button class="btn sm" id="btnZoomOut" aria-label="小さくする">A−</button>
+      <button class="btn sm" id="btnZoomIn" aria-label="大きくする">A＋</button>
+    </span>
     <button class="btn sm" id="btnAccount" title="ログインすると、クラウドに保存して他のパソコンと共有したり、過去に組んだシフトの履歴を見たり、元に戻したりできます">ログイン</button>
     <span class="saved" id="cloudState" title="ログイン中は、入力して数秒たつと自動でクラウドにも保存します"></span>
     <span class="saved" id="saveState" title="入力するたび、このブラウザに自動で保存しています。別のパソコンやブラウザには引き継がれないので、移すときは「ファイルに保存」を使ってください"></span>

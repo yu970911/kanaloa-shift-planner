@@ -2700,6 +2700,25 @@ bindOptions();
 bindSync();
 $('#btnSyncLink').addEventListener('click', copySetupLink);
 $('#btnLoadSheet').hidden = !isSyncReady();
+/* 画面全体の大きさ（文字も表も一緒に拡大）。初期値は少し大きめ */
+const ZOOM_STEPS = [1, 1.1, 1.2, 1.35, 1.5, 1.7];
+const ZOOM_KEY = 'kanaloa.zoom';
+let zoomIdx = window.matchMedia('(max-width: 700px)').matches ? 1 : 2; // スマホは画面が狭いので、少しだけ大きく
+try {
+  const raw = localStorage.getItem(ZOOM_KEY);
+  const v = raw === null ? NaN : Number(raw);
+  if (Number.isInteger(v) && v >= 0 && v < ZOOM_STEPS.length) zoomIdx = v;
+} catch (e) { /* 既定のまま */ }
+function applyZoom() {
+  document.documentElement.style.zoom = String(ZOOM_STEPS[zoomIdx]);
+  $('#btnZoomOut').disabled = zoomIdx === 0;
+  $('#btnZoomIn').disabled = zoomIdx === ZOOM_STEPS.length - 1;
+  try { localStorage.setItem(ZOOM_KEY, String(zoomIdx)); } catch (e) { /* 記憶できなくても動作は続ける */ }
+}
+$('#btnZoomOut').addEventListener('click', () => { if (zoomIdx > 0) { zoomIdx--; applyZoom(); } });
+$('#btnZoomIn').addEventListener('click', () => { if (zoomIdx < ZOOM_STEPS.length - 1) { zoomIdx++; applyZoom(); } });
+applyZoom();
+
 $('#btnAccount').addEventListener('click', openAccountModal);
 renderAccountButton();
 initAccount();

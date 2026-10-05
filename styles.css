@@ -546,6 +546,7 @@ code { font-family: var(--mono); font-size: 11.5px; background: var(--surface2);
   .saved { min-width: 0; font-size: 10.5px; }
   .step { padding: 10px 6px; gap: 6px; }
   .step .d { display: none; }
+  .step > :not(.no) { min-width: 0; overflow: hidden; }
   .step .t { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
   .card-h { padding: 11px 13px; }
   .card-h .r { margin-left: 0; width: 100%; }
@@ -614,3 +615,5 @@ textarea.notice { width: 100%; box-sizing: border-box; font: inherit; font-size:
 .room-cell label.inline input.num-input { width: 46px; }
 .room-cell.full { border-color: var(--warn-bd); background: var(--warn-bg); }
 .room-note { font-size: 10px; color: var(--warn); font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.zoomctl { display: inline-flex; gap: 4px; }
