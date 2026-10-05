@@ -11,7 +11,10 @@ export async function readJSON(key) {
     const text = await new Response(result.stream).text();
     return JSON.parse(text);
   } catch (e) {
-    return null; // 無ければ null（初回保存前など）
+    // 無いだけなら null（初回保存前など）。通信エラー等を「データなし」と取り違えると、
+    // 空だと思って上書き保存してしまうので、それ以外は呼び出し側に投げる
+    if (e && e.name === 'BlobNotFoundError') return null;
+    throw e;
   }
 }
 
