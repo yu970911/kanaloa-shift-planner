@@ -23,7 +23,8 @@ export const login = (email, password) => call('/api/auth/login', { method: 'POS
 export const logout = () => call('/api/auth/logout', { method: 'POST' });
 export const me = () => call('/api/auth/me').catch((e) => (e.code === 'not_logged_in' ? null : Promise.reject(e)));
 
-export const saveCloud = (state, label) => call('/api/state', { method: 'POST', body: { state, label } });
+// opts: { history（false で履歴に残さない）, baseSavedAt（最後に同期した時刻。これより新しい保存があれば 409）, force }
+export const saveCloud = (state, label, opts = {}) => call('/api/state', { method: 'POST', body: { state, label, ...opts } });
 export const loadCloud = () => call('/api/state');
 export const listHistory = () => call('/api/history');
 export const restoreHistory = (id) => call('/api/history-restore', { method: 'POST', body: { id } });

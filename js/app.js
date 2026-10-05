@@ -67,6 +67,7 @@ function save() {
       s.textContent = 'この画面では保存できません';
     }
   }, 200);
+  scheduleCloudSave();
 }
 
 const monthKey = () => `${state.year}-${String(state.month).padStart(2, '0')}`;
@@ -307,7 +308,130 @@ async function initAccount() {
   try { const u = await account.me(); currentAccount = u ? u.email : null; }
   catch (e) { currentAccount = null; }
   renderAccountButton();
+  if (currentAccount) syncOnLogin();
 }
+
+/* ---- 自動クラウド保存 ----
+   入力して数秒たつと、ログイン中なら自動でクラウドの「今のデータ」を更新する。
+   履歴は入力のたびには増やさず、30分に1回だけ残す（「クラウドに保存」ボタンは毎回残す）。
+   別のパソコンが先に保存していたら、気づかず上書きしないよう確認を出す。 */
+const CLOUD_META_KEY = 'kanaloa.cloudMeta'; // { email, savedAt（最後に同期した時刻）, histAt（最後に履歴を残した時刻） }
+const CLOUD_DELAY_MS = 4000;
+const CLOUD_HISTORY_EVERY_MS = 30 * 60 * 1000;
+let cloudTimer = null;
+let cloudBusy = false;
+let cloudDirty = false;
+let suppressCloud = false;
+
+function cloudMeta() {
+  try {
+    const m = JSON.parse(localStorage.getItem(CLOUD_META_KEY) || 'null');
+    if (m && m.email === currentAccount) return m;
+  } catch (e) { /* 読めなければ未同期として扱う */ }
+  return { email: currentAccount, savedAt: null, histAt: 0 };
+}
+function setCloudMeta(patch) {
+  try { localStorage.setItem(CLOUD_META_KEY, JSON.stringify({ ...cloudMeta(), ...patch, email: currentAccount })); } catch (e) { /* 保存できなくても動作は続ける */ }
+}
+function setCloudStatus(text) {
+  const s = $('#cloudState');
+  if (s) s.textContent = text;
+}
+const clockText = () => new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+const cloudLabel = () => `${state.year}年${period().title}`;
+
+function scheduleCloudSave(delay = CLOUD_DELAY_MS) {
+  if (!currentAccount || suppressCloud) return;
+  cloudDirty = true;
+  setCloudStatus('クラウドに未保存…');
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(() => flushCloud(), delay);
+}
+
+/** クラウドに保存する。成功したら true */
+async function flushCloud({ manual = false, force = false } = {}) {
+  if (!currentAccount) return false;
+  if (cloudBusy) { cloudDirty = true; return false; }
+  clearTimeout(cloudTimer);
+  cloudBusy = true;
+  cloudDirty = false;
+  let ok = false;
+  let retry = false;
+  const meta = cloudMeta();
+  const now = Date.now();
+  const wantHistory = manual || now - (meta.histAt || 0) > CLOUD_HISTORY_EVERY_MS;
+  try {
+    setCloudStatus('クラウドに保存中…');
+    const r = await account.saveCloud(state, cloudLabel(), { history: wantHistory, baseSavedAt: meta.savedAt, force });
+    setCloudMeta({ savedAt: r.savedAt, ...(wantHistory ? { histAt: now } : {}) });
+    setCloudStatus('クラウドに保存 ' + clockText());
+    ok = true;
+  } catch (e) {
+    if (e.code === 'conflict') {
+      cloudBusy = false;
+      await resolveConflict();
+      return false;
+    }
+    if (e.code === 'not_logged_in') {
+      currentAccount = null;
+      renderAccountButton();
+      setCloudStatus('ログインが切れました。クラウドには保存されていません');
+    } else {
+      setCloudStatus('クラウドに保存できません。あとでもう一度試します');
+      retry = true;
+    }
+  } finally {
+    cloudBusy = false;
+  }
+  if (retry) { cloudDirty = true; cloudTimer = setTimeout(() => flushCloud(), 30000); }
+  else if (cloudDirty) scheduleCloudSave();
+  return ok;
+}
+
+/** 別のパソコンで、より新しい内容が保存されているとき：どちらを残すか聞く */
+async function resolveConflict() {
+  const load = confirm(
+    '別のパソコンで、より新しい内容がクラウドに保存されています。\n\n'
+    + '［OK］クラウドの内容を読み込む（このブラウザの今の内容は、履歴に残してから置き換えます）\n'
+    + '［キャンセル］このブラウザの内容でクラウドを上書きする（クラウド側の内容も、履歴に残します）',
+  );
+  try {
+    if (load) {
+      await account.saveCloud(state, '（読み込み前のこのブラウザの内容）', { historyOnly: true });
+      const res = await account.loadCloud();
+      if (res.state) { applyCloudState(res.state, res.savedAt); toast('クラウドの内容を読み込みました'); }
+    } else {
+      await flushCloud({ force: true });
+    }
+  } catch (e) {
+    setCloudStatus('クラウドと同期できませんでした');
+    toast(e.message, 5000);
+  }
+}
+
+/** クラウドから読み込んだ内容を画面に反映する（その反映自体は、クラウドへ再保存しない） */
+function applyCloudState(loaded, savedAt) {
+  suppressCloud = true;
+  try { applyLoadedState(loaded); } finally { suppressCloud = false; }
+  if (savedAt) setCloudMeta({ savedAt });
+  setCloudStatus('クラウドと同期済み ' + clockText());
+}
+
+/** ログイン直後・ページを開いた直後：クラウドとこのブラウザの内容をすり合わせる */
+async function syncOnLogin() {
+  try {
+    const res = await account.loadCloud();
+    const meta = cloudMeta();
+    if (!res.state) { flushCloud(); return; } // クラウドが空：このブラウザの内容を最初の保存にする
+    if (meta.savedAt && res.savedAt && res.savedAt <= meta.savedAt) { scheduleCloudSave(1000); return; } // すでに最新
+    await resolveConflict();
+  } catch (e) {
+    setCloudStatus('クラウドと同期できませんでした');
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && cloudDirty) flushCloud();
+});
 
 function openAccountModal() {
   if (currentAccount) openAccountPanel(); else openLoginForm();
@@ -378,6 +502,7 @@ function openLoginForm(prefillEmail) {
       renderAccountButton();
       closeModal();
       toast(mode === 'login' ? 'ログインしました' : '登録してログインしました');
+      syncOnLogin();
     } catch (e) {
       err.hidden = false;
       err.textContent = e.message;
@@ -406,7 +531,7 @@ function openAccountPanel() {
   const mh = el('div', 'mh');
   const t = el('div');
   t.appendChild(el('h2', '', currentAccount));
-  t.appendChild(el('div', 'sub', 'クラウドに保存したデータは、このメールアドレスでログインしたどのパソコンからでも読み書きできます'));
+  t.appendChild(el('div', 'sub', '入力した内容は自動でクラウドに保存され、このメールアドレスでログインしたどのパソコンからでも読み書きできます'));
   mh.appendChild(t);
   const x = el('button', 'btn sm x', '閉じる');
   x.addEventListener('click', closeModal);
@@ -429,11 +554,14 @@ function openAccountPanel() {
   saveBtn.addEventListener('click', async () => {
     saveBtn.disabled = true; saveBtn.textContent = '保存中…';
     try {
-      const label = `${state.year}年${period().title}`;
-      await account.saveCloud(state, label);
-      status.textContent = `保存しました（${new Date().toLocaleString('ja-JP')}）`;
-      toast('クラウドに保存しました');
-      renderHistoryList();
+      const ok = await flushCloud({ manual: true });
+      if (ok) {
+        status.textContent = `保存しました（${new Date().toLocaleString('ja-JP')}）`;
+        toast('クラウドに保存しました');
+        renderHistoryList();
+      } else {
+        status.textContent = 'クラウドに保存できませんでした。画面右上の表示を確認してください';
+      }
     } catch (e) {
       status.textContent = e.message;
     } finally {
@@ -446,7 +574,7 @@ function openAccountPanel() {
     try {
       const res = await account.loadCloud();
       if (!res.state) { status.textContent = 'クラウドにはまだ保存されていません'; return; }
-      applyLoadedState(res.state);
+      applyCloudState(res.state, res.savedAt);
       status.textContent = '読み込みました';
       toast('クラウドの内容を読み込みました');
     } catch (e) {
@@ -458,13 +586,16 @@ function openAccountPanel() {
   logoutBtn.addEventListener('click', async () => {
     try { await account.logout(); } catch (e) { /* ログアウトはエラーでも見た目上は抜ける */ }
     currentAccount = null;
+    clearTimeout(cloudTimer);
+    cloudDirty = false;
+    setCloudStatus('');
     renderAccountButton();
     closeModal();
     toast('ログアウトしました');
   });
 
   body.appendChild(el('h3', '', '履歴（過去にAIで作ったシフト案）'));
-  body.appendChild(el('p', 'hint', '「クラウドに保存」するたびに1件残ります。選ぶと、その時点の内容に戻せます（今の内容も履歴に残るので、間違えても戻せます）。'));
+  body.appendChild(el('p', 'hint', '入力すると数秒後に自動でクラウドへ保存され、履歴は30分に1回と「クラウドに保存」を押したときに残ります。選ぶと、その時点の内容に戻せます（今の内容も履歴に残るので、間違えても戻せます）。'));
   const list = el('div');
   list.id = 'historyList';
   body.appendChild(list);
@@ -495,7 +626,7 @@ async function renderHistoryList() {
         b.disabled = true; b.textContent = '戻しています…';
         try {
           const res = await account.restoreHistory(it.id);
-          applyLoadedState(res.state);
+          applyCloudState(res.state, res.savedAt);
           toast('その時点の内容に戻しました');
           closeModal();
         } catch (e) {
