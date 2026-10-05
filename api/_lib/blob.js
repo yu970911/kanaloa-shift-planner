@@ -5,7 +5,8 @@ import { put, list, del, get } from '@vercel/blob';
 
 export async function readJSON(key) {
   try {
-    const result = await get(key, { access: 'private' });
+    // useCache:false … CDNのキャッシュを通さず、常に最新を読む（上書き保存した直後に古い内容が返るのを防ぐ）
+    const result = await get(key, { access: 'private', useCache: false });
     if (!result || result.statusCode !== 200) return null;
     const text = await new Response(result.stream).text();
     return JSON.parse(text);
