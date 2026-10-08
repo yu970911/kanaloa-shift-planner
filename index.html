@@ -155,6 +155,31 @@
           </div>
         </div>
 
+        <div class="card" id="shiftImpCard">
+          <div class="card-h">
+            <h2>確定したシフトを取り込む</h2>
+            <span class="sub">前半の最終版・過去のシフトを読み込んで、後半の作成に生かす</span>
+          </div>
+          <div class="pad">
+            <p class="hint">スプレッドシートの確定版（1〜15日など）を範囲ごとコピーして貼り付けるか、CSVを選びます。名前の列と、日にち（1, 2, 3…）が並ぶ行があれば読めます。
+              取り込んだ日は確定として扱い、後半を組むときは、連勤・出勤日数・労働時間・休みの数を、前半の分も数えて引き継ぎます。
+              過去の月は、上の月を切り替えてから取り込みます。</p>
+            <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+              <label class="inline">取り込む日　
+                <select id="shiftImpRange">
+                  <option value="first">前半（1〜15日）</option>
+                  <option value="second">後半（16日〜月末）</option>
+                  <option value="all">すべての日</option>
+                </select>
+              </label>
+              <input type="file" id="shiftImpFile" accept=".csv,.tsv,.txt,text/csv,text/plain">
+            </div>
+            <textarea id="shiftImpText" rows="4" placeholder="ここにシフト表を貼り付け（スプレッドシートで範囲を選んでコピー）"></textarea>
+            <div class="row"><button class="btn primary" id="btnShiftImpRead">読み取る</button></div>
+            <div id="shiftImpResult"></div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-h">
             <h2>詳細設定</h2>

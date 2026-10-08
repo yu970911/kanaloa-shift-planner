@@ -6,7 +6,7 @@ import {
   patternSegments, DAY_START, DAY_END, defaultLabor, kubunOf, KUBUN_LIST, monthlyHourCap, weekIndex, hoursOf, alwaysWindow, lunchDuty, cleanerCount,
 } from './model.js';
 import { createRun, validate, candidatesFor, isWorkSymbol, laborOf, weekCap, makeSlotter } from './solver.js';
-import { importFormCsv, importMessages, guessColumns, parseCSV, parseRoomsInput, parseRoomsInputDetail, roomsFromVacancy, parseDayRequests, toTSV } from './importers.js';
+import { importFormCsv, importMessages, guessColumns, parseCSV, parseRoomsInput, parseRoomsInputDetail, roomsFromVacancy, parseDayRequests, toTSV, importShiftTable } from './importers.js';
 import { renderShiftImage } from './image.js';
 import { periodRange, deadlineOf, deadlineStatus, deadlineMessage, nextPeriod, buildNotice, fmtDate } from './period.js';
 import { loadSync, saveSync, isValidSheetUrl, isSyncReady, callSheet, buildSheetTable, stateForSheet, encodeSetup, decodeSetup } from './sheets.js';
@@ -2458,6 +2458,8 @@ function renderDeadline() {
   const { p, dl, st } = periodStatus(state.period);
   $('#deadlineMsg').textContent = deadlineMessage(p, dl, st);
   $('#deadlineBar').className = 'deadline ' + st.state;
+  const sr = $('#shiftImpRange');
+  if (sr && sr.dataset.touched !== '1') sr.value = state.period === 'second' ? 'first' : 'all';
   const dd = $('#dlDays');
   if (document.activeElement !== dd) dd.value = state.options.deadlineDaysBefore;
 }
@@ -2699,6 +2701,93 @@ function doDayRequests() {
   else toast('読み取れなかった指示があります');
 }
 $('#btnDayReq').addEventListener('click', doDayRequests);
+
+/* ---------------- 確定したシフトの取り込み ---------------- */
+let shiftImp = null;   // 読み取った結果（まだ取り込んでいない）
+
+/** 取り込む日の範囲 */
+function shiftImpRange() {
+  const v = $('#shiftImpRange').value;
+  const md = period().monthDays;
+  const first = periodRange(state.year, state.month, 'first');
+  const second = periodRange(state.year, state.month, 'second');
+  if (v === 'first') return { from: first.from, to: first.to, halves: ['first'] };
+  if (v === 'second') return { from: second.from, to: second.to, halves: ['second'] };
+  return { from: 1, to: md, halves: ['first', 'second'] };
+}
+function readShiftImport() {
+  const text = $('#shiftImpText').value.trim();
+  const host = $('#shiftImpResult');
+  host.innerHTML = '';
+  shiftImp = null;
+  if (!text) { toast('シフト表を貼り付けてください'); return; }
+  const r = importShiftTable(text, { members: activeMembers(), daysInMonth: period().monthDays });
+  if (!r.headerFound) {
+    host.appendChild(el('p', 'hint', '日にち（1, 2, 3…）が横に並んだ行が見つかりませんでした。見出しの行も含めて、範囲をコピーし直してください。'));
+    return;
+  }
+  const range = shiftImpRange();
+  const inRange = (d) => d >= range.from && d <= range.to;
+  const counts = new Map();
+  for (const [mid, days] of Object.entries(r.grid)) counts.set(mid, Object.keys(days).filter((d) => inRange(Number(d))).length);
+  const usable = [...counts.values()].reduce((a, b) => a + b, 0);
+  host.appendChild(el('h3', '', `${state.year}年${state.month}月 ${range.from}〜${range.to}日として読み取りました（表の日にち：${r.days[0]}〜${r.days[1]}日）`));
+  if (!usable) {
+    host.appendChild(el('p', 'hint', `選んだ日（${range.from}〜${range.to}日）の分が、貼り付けた表にありません。「取り込む日」を変えるか、月を確認してください。`));
+    return;
+  }
+  const ul = el('ul', 'ok-list');
+  for (const { member } of r.matched) ul.appendChild(el('li', '', `${member.name}：${counts.get(member.id)}日分`));
+  host.appendChild(ul);
+  const missing = activeMembers().filter((m) => !r.grid[m.id] && m.mode !== 'manual');
+  if (missing.length) host.appendChild(el('p', 'hint', `表に載っていない人：${missing.map((m) => m.name).join('、')}（この人たちの分は、取り込みません）`));
+  if (r.unmatched.length) host.appendChild(el('p', 'hint', `名簿と一致せず、取り込めなかった名前：${r.unmatched.join('、')}`));
+  const unk = Object.entries(r.unknown);
+  if (unk.length) host.appendChild(el('p', 'hint', `読めなかった記号（その日は取り込みません）：${unk.map(([k, n]) => `「${k}」${n}件`).join('、')}`));
+  shiftImp = { grid: r.grid, range };
+  const row = el('div', 'row');
+  const go = el('button', 'btn primary', 'この内容で取り込む');
+  go.addEventListener('click', applyShiftImport);
+  row.appendChild(go);
+  host.appendChild(row);
+}
+function applyShiftImport() {
+  if (!shiftImp) return;
+  const { grid, range } = shiftImp;
+  const md = mdata();
+  const made = md.grid && activeMembers().some((m) => md.grid[m.id] && Object.keys(md.grid[m.id]).some((k) => Number(k) >= range.from && Number(k) <= range.to && md.grid[m.id][k] !== undefined));
+  if (made && !confirm(`${range.from}〜${range.to}日には、すでに組んだシフトがあります。取り込んだ内容で置き換えます。よろしいですか？`)) return;
+  if (!md.grid) md.grid = {};
+  let cells = 0;
+  for (const m of activeMembers()) {
+    const src = grid[m.id];
+    if (!src) continue;
+    md.grid[m.id] = md.grid[m.id] || {};
+    for (const [d, sym] of Object.entries(src)) {
+      if (Number(d) < range.from || Number(d) > range.to) continue;
+      md.grid[m.id][d] = sym;
+      cells++;
+    }
+  }
+  const stamp = new Date().toISOString();
+  for (const h of range.halves) md.done[h] = md.done[h] || stamp;   // 確定版として取り込んだので、確定済みにする
+  shiftImp = null;
+  $('#shiftImpText').value = '';
+  $('#shiftImpResult').innerHTML = '';
+  save(); renderDeadline(); renderRoster(); renderLaunch();
+  toast(`${cells}マスを取り込みました。後半は、この内容を引き継いで組みます`, 4500);
+}
+$('#btnShiftImpRead').addEventListener('click', readShiftImport);
+$('#shiftImpFile').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { $('#shiftImpText').value = r.result; readShiftImport(); };
+  r.readAsText(f, 'utf-8');
+  e.target.value = '';
+});
+$('#shiftImpRange').addEventListener('change', () => { $('#shiftImpRange').dataset.touched = '1'; if (shiftImp || $('#shiftImpText').value.trim()) readShiftImport(); });
+
 $('#btnClearDayReq').addEventListener('click', () => {
   if (!confirm(`${state.year}年${state.month}月の「全員出勤」「清掃の人数」「焼き鳥屋などの人数指定」「日ごとのメモ」を消します。よろしいですか？`)) return;
   const md = mdata();

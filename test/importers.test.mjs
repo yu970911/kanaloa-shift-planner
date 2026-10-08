@@ -1,7 +1,7 @@
 // 取り込み・出力の確認: node test/importers.test.mjs
 import {
   parseCSV, extractDays, extractRanges, extractStreakWish, rangeToDays, toHalfWidth,
-  importFormCsv, importMessages, guessColumns, parseRoomsInput, parseRoomsInputDetail, roomsFromVacancy, parseDayRequests, toTSV, normalizeName,
+  importFormCsv, importMessages, guessColumns, parseRoomsInput, parseRoomsInputDetail, roomsFromVacancy, parseDayRequests, toTSV, normalizeName, importShiftTable, normalizeShiftSymbol,
 } from '../js/importers.js';
 import { buildDays, defaultSlotRules } from '../js/model.js';
 import { testMembers } from './fixtures.mjs';
@@ -435,6 +435,32 @@ console.log('\n=== 呼び名（スー・ケー・アナ）での照合 ===');
   // 呼び名が無い人（nicknames未設定）には影響しない
   const noNick = importMessages('スー 13日は休み', { members: testMembers(), month: 10, daysInMonth: 31 });
   ok(!noNick.matched.length && (!noNick.unassigned || noNick.unassigned.text.includes('スー')), '呼び名を登録していない名簿では、「スー」だけでは誰か分からない');
+}
+
+console.log('\n=== 確定したシフト表の取り込み ===');
+{
+  eq(['休', '公休', '特', '有給', '✖', '×', 'a', 'Ｂ', '', ' H ', '半'].map(normalizeShiftSymbol), ['休', '休', '特', '特', '✖', '✖', 'A', 'B', '', 'H', null], '記号の正規化');
+  const members = testMembers();
+  const names = members.slice(0, 3).map((m) => m.name);
+  const header = ['区分', '名前', '担当', '出勤'].concat(Array.from({ length: 15 }, (_, i) => String(i + 1))).join('\t');
+  const row = (n, syms) => ['', n, '', '9'].concat(syms).join('\t');
+  const syms1 = ['A', '休', 'B', 'C', 'D', '休', '休', 'E', 'F', 'G', 'H', '休', '特', '×', '半'];
+  const tsv = [header, row(names[0], syms1), row(names[1], Array(15).fill('休')), row('だれか', syms1), '\t必要人数\t\t' + '\t3'.repeat(15)].join('\n');
+  const r = importShiftTable(tsv, { members, daysInMonth: 31 });
+  ok(r.headerFound && r.days[0] === 1 && r.days[1] === 15, '見出し行（1〜15）を見つける', JSON.stringify(r.days));
+  const g0 = r.grid[members[0].id];
+  ok(g0 && g0[1] === 'A' && g0[2] === '休' && g0[13] === '特' && g0[14] === '✖', '記号を日ごとに読む', JSON.stringify(g0));
+  ok(g0[15] === undefined && r.unknown['半'] === 1, '読めない記号は取り込まず、知らせる', JSON.stringify(r.unknown));
+  ok(r.unmatched.join() === 'だれか', '名簿にない名前は取り込まず、知らせる', r.unmatched.join());
+  ok(r.matched.length === 2, '「必要人数」などの集計行は読み飛ばす', String(r.matched.length));
+  const csv = [header.replace(/\t/g, ','), [''].concat([names[0], '', 9], syms1).join(',')].join('\n');
+  ok(importShiftTable(csv, { members, daysInMonth: 31 }).grid[members[0].id][8] === 'E', 'CSVも読める');
+  ok(!importShiftTable('名前\t備考\nあ\tい', { members, daysInMonth: 31 }).headerFound, '日にちの見出しが無い表は読まない');
+  // 自分の書き出し（toTSV）をそのまま戻せる
+  const days = Array.from({ length: 15 }, (_, i) => ({ day: i + 1 }));
+  const grid = {}; grid[members[0].id] = {}; for (let d = 1; d <= 15; d++) grid[members[0].id][d] = d % 3 ? 'A' : '休';
+  const back = importShiftTable(toTSV(members, days, grid), { members, daysInMonth: 31 });
+  ok(back.grid[members[0].id][3] === '休' && back.grid[members[0].id][4] === 'A', '「ファイルに保存」系の書き出し（toTSV）を読み戻せる');
 }
 
 console.log(failed === 0 ? '\n全項目 PASS' : '\n' + failed + '件 FAIL');

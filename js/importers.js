@@ -672,3 +672,100 @@ export function importMessages(text, { members, month, daysInMonth }) {
 
   return { requests, streaks, matched, needsCheck, ambiguous, unassigned, preview, notes };
 }
+
+/* ===== 確定したシフト表の取り込み（前半の最終版・過去の月） ===== */
+
+const SHIFT_OFF_WORDS = ['休', '休み', '公休', '希望休', 'off', '-', 'ー', '―', '－'];
+const SHIFT_SPECIAL_WORDS = ['特', '特休', '有給', '有休', '年休', '特別休暇'];
+const SHIFT_NG_WORDS = ['✖', '✕', '×', '不在', '欠'];
+
+/**
+ * シフト表の1マスを、アプリの記号（A〜H・休・特・✖）にそろえる。
+ * 読めないものは null（呼び出し側で「読めなかった記号」として知らせる）。空欄は ''。
+ */
+export function normalizeShiftSymbol(raw) {
+  const v = String(raw == null ? '' : raw)
+    .replace(/[Ａ-Ｚａ-ｚ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .trim();
+  if (v === '') return '';
+  const lower = v.toLowerCase();
+  if (SHIFT_OFF_WORDS.includes(lower)) return '休';
+  if (SHIFT_SPECIAL_WORDS.includes(v)) return '特';
+  if (SHIFT_NG_WORDS.includes(v)) return '✖';
+  const up = v.toUpperCase();
+  if (/^[A-H]$/.test(up)) return up;
+  return null;
+}
+
+/** 貼り付け（タブ区切り）・CSV のどちらでも、行×列の配列にする */
+function tableRows(text) {
+  const src = String(text || '').replace(/^﻿/, '');
+  const hasTab = src.split('\n').slice(0, 20).some((l) => l.includes('\t'));
+  if (!hasTab) return parseCSV(src);
+  return src.split(/\r?\n/).map((l) => l.split('\t')).filter((r) => r.some((c) => String(c).trim() !== ''));
+}
+
+/**
+ * 確定済みのシフト表（スプレッドシートからコピー／CSV）を、人×日の記号に直す。
+ * 見出し行（1,2,3…と日にちが並ぶ行）を探し、その左側の列にある名前を名簿と照合する。
+ * @returns {{grid, matched, unmatched, unknown, days, headerFound}}
+ *   grid: {memberId: {day: 記号}}、matched: [{member, count}]、unmatched: 名簿にない名前、
+ *   unknown: {読めなかった記号: 件数}、days: 見つかった日にちの範囲 [最小, 最大]
+ */
+export function importShiftTable(text, { members, daysInMonth }) {
+  const rows = tableRows(text);
+  const result = { grid: {}, matched: [], unmatched: [], unknown: {}, days: null, headerFound: false };
+
+  // 見出し行：1〜31 の整数（「1」「1日」「１」）が5つ以上並ぶ最初の行
+  const dayOf = (c) => {
+    const m = /^(\d{1,2})\s*日?$/.exec(toHalfWidth(String(c)).trim());
+    const n = m ? Number(m[1]) : NaN;
+    return n >= 1 && n <= 31 ? n : NaN;
+  };
+  let headerIdx = -1;
+  let dayCols = [];
+  for (let i = 0; i < rows.length; i++) {
+    const cols = [];
+    rows[i].forEach((c, ci) => { const d = dayOf(c); if (!Number.isNaN(d) && d <= daysInMonth) cols.push({ ci, day: d }); });
+    if (cols.length >= 5) { headerIdx = i; dayCols = cols; break; }
+  }
+  if (headerIdx < 0) return result;
+  result.headerFound = true;
+  const firstDayCol = Math.min(...dayCols.map((x) => x.ci));
+  result.days = [Math.min(...dayCols.map((x) => x.day)), Math.max(...dayCols.map((x) => x.day))];
+
+  const keys = memberKeys(members);
+  const findMember = (cell) => {
+    const k = normalizeName(cell);
+    if (k.length < 1) return null;
+    const hit = keys.filter((x) => x.key === k && !x.ambiguous);
+    return hit.length ? hit[0].member : null;
+  };
+  const SKIP = /必要|人数|合計|入っている|出勤数|計$/;
+  const counts = new Map();
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    const left = row.slice(0, firstDayCol).map((c) => String(c || '').trim()).filter(Boolean);
+    if (!left.length || left.some((c) => SKIP.test(c))) continue;
+    let member = null;
+    for (const c of left) { member = findMember(c); if (member) break; }
+    if (!member) {
+      const label = left.filter((c) => !/^\d+(\.\d+)?$/.test(c)).sort((a, b) => b.length - a.length)[0];
+      const anyCell = dayCols.some((x) => String(row[x.ci] || '').trim() !== '');
+      if (label && anyCell && !result.unmatched.includes(label)) result.unmatched.push(label);
+      continue;
+    }
+    const g = result.grid[member.id] || (result.grid[member.id] = {});
+    for (const { ci, day } of dayCols) {
+      const raw = row[ci];
+      const sym = normalizeShiftSymbol(raw);
+      if (sym === null) { const key = String(raw).trim(); result.unknown[key] = (result.unknown[key] || 0) + 1; continue; }
+      if (sym === '') { if (member.mode === 'always') g[day] = ''; continue; }  // 記号なしの常勤だけ、空欄＝出勤
+      g[day] = sym;
+      counts.set(member.id, (counts.get(member.id) || 0) + 1);
+    }
+  }
+  result.matched = members.filter((m) => result.grid[m.id]).map((m) => ({ member: m, count: counts.get(m.id) || 0 }));
+  return result;
+}
