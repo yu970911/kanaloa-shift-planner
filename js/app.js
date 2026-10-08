@@ -333,6 +333,29 @@ function cloudMeta() {
 function setCloudMeta(patch) {
   try { localStorage.setItem(CLOUD_META_KEY, JSON.stringify({ ...cloudMeta(), ...patch, email: currentAccount })); } catch (e) { /* 保存できなくても動作は続ける */ }
 }
+/* このタブが最後にクラウドと同期した時点（時刻と内容のハッシュ）。
+   ほかのタブが先に保存していたら、このタブの古い内容で黙って上書きしないよう、
+   localStorage ではなくタブごとのメモリを基準にする。 */
+let cloudSync = { email: null, savedAt: null, hash: null };
+function loadCloudSync() {
+  if (cloudSync.email !== currentAccount) {
+    const m = cloudMeta();
+    cloudSync = { email: currentAccount, savedAt: m.savedAt || null, hash: m.hash || null };
+  }
+  return cloudSync;
+}
+function stateHash() {
+  const str = JSON.stringify(state);
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return `${h}:${str.length}`;
+}
+function markSynced(savedAt, hash, extra = {}) {
+  const c = loadCloudSync();
+  c.savedAt = savedAt;
+  c.hash = hash;
+  setCloudMeta({ savedAt, hash, ...extra });
+}
 function setCloudStatus(text) {
   const s = $('#cloudState');
   if (s) s.textContent = text;
@@ -357,13 +380,20 @@ async function flushCloud({ manual = false, force = false } = {}) {
   cloudDirty = false;
   let ok = false;
   let retry = false;
+  const sync = loadCloudSync();
   const meta = cloudMeta();
   const now = Date.now();
   const wantHistory = manual || now - (meta.histAt || 0) > CLOUD_HISTORY_EVERY_MS;
+  const sentHash = stateHash();
   try {
+    if (!manual && !force && sentHash === sync.hash) { // 前回の保存から内容が変わっていない
+      setCloudStatus('クラウドと同期済み');
+      cloudBusy = false;
+      return true;
+    }
     setCloudStatus('クラウドに保存中…');
-    const r = await account.saveCloud(state, cloudLabel(), { history: wantHistory, baseSavedAt: meta.savedAt, force });
-    setCloudMeta({ savedAt: r.savedAt, ...(wantHistory ? { histAt: now } : {}) });
+    const r = await account.saveCloud(state, cloudLabel(), { history: wantHistory, baseSavedAt: sync.savedAt, force });
+    markSynced(r.savedAt, sentHash, wantHistory ? { histAt: now } : {});
     setCloudStatus('クラウドに保存 ' + clockText());
     ok = true;
   } catch (e) {
@@ -413,7 +443,7 @@ async function resolveConflict() {
 function applyCloudState(loaded, savedAt) {
   suppressCloud = true;
   try { applyLoadedState(loaded); } finally { suppressCloud = false; }
-  if (savedAt) setCloudMeta({ savedAt });
+  if (savedAt) markSynced(savedAt, stateHash());
   setCloudStatus('クラウドと同期済み ' + clockText());
 }
 
@@ -421,9 +451,19 @@ function applyCloudState(loaded, savedAt) {
 async function syncOnLogin() {
   try {
     const res = await account.loadCloud();
-    const meta = cloudMeta();
-    if (!res.state) { flushCloud(); return; } // クラウドが空：このブラウザの内容を最初の保存にする
-    if (meta.savedAt && res.savedAt && res.savedAt <= meta.savedAt) { scheduleCloudSave(1000); return; } // すでに最新
+    const sync = loadCloudSync();
+    if (!res.state) { flushCloud({ force: true }); return; } // クラウドが空：このブラウザの内容を最初の保存にする
+    const cloudNewer = !sync.savedAt || !res.savedAt || res.savedAt > sync.savedAt;
+    const localChanged = sync.hash !== stateHash();
+    if (!cloudNewer) { // クラウドは自分の最後の保存のまま
+      if (localChanged) scheduleCloudSave(1000); else setCloudStatus('クラウドと同期済み');
+      return;
+    }
+    if (!localChanged && sync.savedAt) { // 自分は何も変えていないので、確認なしで最新を読み込む
+      applyCloudState(res.state, res.savedAt);
+      toast('別のパソコンで保存された最新の内容を読み込みました');
+      return;
+    }
     await resolveConflict();
   } catch (e) {
     setCloudStatus('クラウドと同期できませんでした');

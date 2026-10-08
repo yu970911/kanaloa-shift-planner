@@ -12,7 +12,7 @@ export default withErrors(async function handler(req, res) {
 
   const { id } = req.body || {};
   // 必ず本人の履歴だけを指しているか確認する（他人の履歴パスを渡されても読ませない）
-  if (typeof id !== 'string' || !id.startsWith(`data/${k}/history/`)) {
+  if (typeof id !== 'string' || !id.startsWith(`data/${k}/history/`) || id.includes('..')) {
     return res.status(400).json({ error: 'invalid_id' });
   }
   const snap = await readJSON(id);

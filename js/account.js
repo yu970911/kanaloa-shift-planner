@@ -10,7 +10,8 @@ async function call(path, opts = {}) {
   let json;
   try { json = await res.json(); } catch (e) { json = null; }
   if (!res.ok) {
-    const msg = (json && json.message) || (json && json.error) || `通信に失敗しました（${res.status}）`;
+    const msg = (json && json.message) || (json && json.error)
+      || (res.status === 413 ? '保存するデータが大きすぎて、クラウドに送れません' : `通信に失敗しました（${res.status}）`);
     const err = new Error(msg);
     err.code = json && json.error;
     throw err;
