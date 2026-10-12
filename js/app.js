@@ -1,4 +1,4 @@
-// 画面まわり。手順1「希望を集める」→ 手順2「組む」→ 手順3「確認して仕上げる」の3段構成。
+// 画面まわり。見た目は 手順1「希望を集める」→ 手順2「シフトを組んで確認する」の2段。内部では、組んでいる最中の画面（scRun）と結果の画面（scRes）に分かれる。
 import {
   PATTERNS, PATTERN_CODES, OFF_SYMBOLS, ROLES, ASSIGN_MODES,
   defaultMembers, defaultSlotRules, defaultOptions, expandSlots, buildDays, DOW_LABELS, ROSTER_REV, migrateRoster,
@@ -8,7 +8,7 @@ import {
 import { createRun, validate, candidatesFor, isWorkSymbol, laborOf, weekCap, makeSlotter } from './solver.js';
 import { importFormCsv, importMessages, guessColumns, parseCSV, parseRoomsInput, parseRoomsInputDetail, roomsFromVacancy, parseDayRequests, toTSV, importShiftTable } from './importers.js';
 import { renderShiftImage } from './image.js';
-import { periodRange, deadlineOf, deadlineStatus, deadlineMessage, nextPeriod, buildNotice, fmtDate } from './period.js';
+import { periodRange, deadlineOf, deadlineStatus, deadlineMessage, nextPeriod, fmtDate } from './period.js';
 import { loadSync, saveSync, isValidSheetUrl, isSyncReady, callSheet, buildSheetTable, stateForSheet, encodeSetup, decodeSetup } from './sheets.js';
 import * as account from './account.js';
 
@@ -137,8 +137,9 @@ function goStep(n) {
   $('#scRes').hidden = n !== 3;
   $$('#stepper .step').forEach((b) => {
     const s = Number(b.dataset.s);
-    b.classList.toggle('on', s === n);
-    b.classList.toggle('done', s < n || (s === 1 && n === 3) || (s < 3 && hasGrid() && s !== n));
+    const on = s === 1 ? n === 1 : n >= 2;           // 「シフトを組んで確認する」は、組んでいる最中も含む
+    b.classList.toggle('on', on);
+    b.classList.toggle('done', s === 1 && n >= 2);
   });
   if (n === 1) renderCollect();
   if (n === 3) renderResult();
@@ -1613,7 +1614,7 @@ function renderResult() {
   renderTimeline();
   renderPersonView(v);
   showView();
-  $('#stepSub3').textContent = `不足${v.issues.filter((i) => i.type === 'shortage' && !i.optional).length}枠`;
+  $('#stepSub3').textContent = `人が足りない枠 ${v.issues.filter((i) => i.type === 'shortage' && !i.optional).length}件`;
   renderShareStatus();
   renderNotify(v);
 }
@@ -2585,54 +2586,23 @@ function renderDeadline() {
   if (document.activeElement !== dd) dd.value = state.options.deadlineDaysBefore;
 }
 
-/** スタッフへの通知文（LINEに貼る用）を出す */
-let noticePersonId = null;
-let notice = null;
+/** 確定の状態と、締切・人が足りない枠の案内を出す */
 function renderNotify(v) {
   const p = period();
-  const grid = mdata().grid;
   const { dl, doneAt, st } = periodStatus(p.which);
-  notice = buildNotice({ period: p, members: activeMembers(), days: days(), grid });
   $('#notifySub').textContent = `${p.title} ／ 締切 ${fmtDate(dl)}`;
   const short = v ? v.issues.filter((i) => i.type === 'shortage' && !i.optional).length : 0;
   const hint = $('#notifyHint');
   if (doneAt) {
     hint.className = 'hint ok';
-    hint.textContent = `確定済みです（${new Date(doneAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}）。下の文面と画像をスタッフに送ってください。手直ししたら、確定し直して送り直します。`;
+    hint.textContent = `確定済みです（${new Date(doneAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}）。手直ししたら、確定し直してください。`;
   } else {
     hint.className = 'hint' + (st.state === 'overdue' || st.state === 'today' ? ' warn' : '');
-    hint.textContent = `手直しが終わったら「確定する」を押してから、文面と画像をスタッフに送ってください。締切は ${fmtDate(dl)} です。`
+    hint.textContent = `手直しが終わったら「確定する」を押してください。締切は ${fmtDate(dl)} です。`
       + (short ? `（いま人が足りない枠が${short}件あります）` : '');
   }
   $('#btnConfirm').textContent = doneAt ? '確定を取り消す' : 'このシフトで確定する';
   $('#btnConfirm').classList.toggle('primary', !doneAt);
-  $('#noticeCommon').value = notice.common;
-
-  const sel = $('#noticePersonSel');
-  sel.innerHTML = '';
-  if (!notice.perPerson.some((x) => x.id === noticePersonId)) noticePersonId = notice.perPerson[0] ? notice.perPerson[0].id : null;
-  for (const x of notice.perPerson) {
-    const o = el('option', '', `${x.name}（出勤${x.work}日）`);
-    o.value = x.id;
-    if (x.id === noticePersonId) o.selected = true;
-    sel.appendChild(o);
-  }
-  showNoticePerson();
-}
-function showNoticePerson() {
-  const x = notice && notice.perPerson.find((y) => y.id === noticePersonId);
-  $('#noticePerson').value = x ? x.text : '';
-}
-
-function copyText(text, okMsg) {
-  const fallback = () => {
-    const ta = el('textarea');
-    ta.value = text;
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-    toast(okMsg);
-  };
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast(okMsg), fallback);
-  else fallback();
 }
 
 function toggleConfirm() {
@@ -2649,7 +2619,7 @@ function toggleConfirm() {
   if (short && !confirm(`人が足りない枠が${short}件のこっています。このまま確定しますか？`)) return;
   d[p.which] = new Date().toISOString();
   save(); renderResult(); renderDeadline();
-  toast(`${p.title}のシフトを確定しました。文面と画像をスタッフに送ってください`, 5000);
+  toast(`${p.title}のシフトを確定しました`, 5000);
 }
 
 /* ---------------- 起動 ---------------- */
@@ -2672,7 +2642,7 @@ function syncMonthInputs() {
 
 $$('#stepper .step').forEach((b) => b.addEventListener('click', () => {
   const n = Number(b.dataset.s);
-  if (n === 2) { if (hasGrid()) goStep(3); else startRun(false); return; }
+  if (n === 3) { if (hasGrid()) goStep(3); else startRun(false); return; }   // 組んであれば確認へ、まだなら組む
   goStep(n);
 }));
 $('#btnRun').addEventListener('click', () => startRun(false));
@@ -2696,14 +2666,6 @@ $('#btnLoadSheet').addEventListener('click', loadFromSheet);
 $('#btnImage').addEventListener('click', openImage);
 $('#btnCsv').addEventListener('click', downloadCSV);
 $('#btnConfirm').addEventListener('click', toggleConfirm);
-$('#btnCopyCommon').addEventListener('click', () => copyText($('#noticeCommon').value, '全員向けの文面をコピーしました。SlackやLINEに貼り付けてください'));
-$('#btnCopyPerson').addEventListener('click', () => copyText($('#noticePerson').value, 'この人の分をコピーしました'));
-$('#btnCopyAll').addEventListener('click', () => {
-  if (!notice) return;
-  copyText(notice.perPerson.map((x) => x.text).join('\n\n――――――――――\n\n'), `${notice.perPerson.length}名分をまとめてコピーしました`);
-});
-$('#btnNoticeImage').addEventListener('click', openImage);
-$('#noticePersonSel').addEventListener('change', (e) => { noticePersonId = e.target.value; showNoticePerson(); });
 $('#dlDays').addEventListener('change', (e) => {
   state.options.deadlineDaysBefore = Math.min(14, Math.max(0, Number(e.target.value) || 0));
   save(); renderDeadline(); if (step === 3) renderNotify();

@@ -43,8 +43,7 @@
 
   <div class="stepper" id="stepper">
     <button class="step on" data-s="1"><div class="no">1</div><div><div class="t">希望を集める</div><div class="d" id="stepSub1">—</div></div></button>
-    <button class="step" data-s="2"><div class="no">2</div><div><div class="t">シフトを組む</div><div class="d" id="stepSub2">条件を満たす配置を探す</div></div></button>
-    <button class="step" data-s="3"><div class="no">3</div><div><div class="t">確認して仕上げる</div><div class="d" id="stepSub3">手直ししてコピー</div></div></button>
+    <button class="step" data-s="3"><div class="no">2</div><div><div class="t">シフトを組んで確認する</div><div class="d" id="stepSub3">組んだあと、手直しして確定</div></div></button>
   </div>
 
   <!-- 15日ごとの期間と、完成の締切 -->
@@ -378,32 +377,12 @@
 
     <div class="card notify" id="notifyCard">
       <div class="card-h">
-        <h2>スタッフに通知する</h2>
+        <h2>確定する</h2>
         <span class="sub" id="notifySub">—</span>
         <div class="r"><button class="btn primary" id="btnConfirm">このシフトで確定する</button></div>
       </div>
       <div class="pad">
         <p class="hint" id="notifyHint"></p>
-        <div class="share-grid">
-          <div class="share-item">
-            <div class="share-t">全員への連絡（SlackやLINEに貼る）</div>
-            <textarea id="noticeCommon" class="notice" rows="6" readonly></textarea>
-            <div class="row">
-              <button class="btn" id="btnCopyCommon">文面をコピー</button>
-              <button class="btn" id="btnNoticeImage">この期間の画像を作る</button>
-            </div>
-            <div class="share-d">画像はSlackやLINEに貼れます。文面と画像を続けて送ってください。</div>
-          </div>
-          <div class="share-item">
-            <div class="share-t">個人ごとの勤務予定</div>
-            <select id="noticePersonSel" class="notice-sel"></select>
-            <textarea id="noticePerson" class="notice" rows="8" readonly></textarea>
-            <div class="row">
-              <button class="btn" id="btnCopyPerson">この人の分をコピー</button>
-              <button class="btn" id="btnCopyAll">全員分をまとめてコピー</button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
