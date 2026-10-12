@@ -628,3 +628,7 @@ table.ov td.special { background: var(--warn-bg); color: var(--warn); }
 table.ov td.ng { background: var(--bad-bg); color: var(--bad); }
 table.ov td.rq { outline: 1.5px dashed var(--accent); outline-offset: -3px; color: var(--accent); background: var(--accent-bg); font-weight: 700; }
 table.ov td.empty { color: var(--line); }
+table.ov tr.rooms td.inst { background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+.ov-instr { list-style: none; margin: 8px 0 0; padding: 8px 12px; border: 1px solid var(--warn-bd); background: var(--warn-bg); border-radius: var(--r); display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.ov-instr li { display: flex; gap: 12px; flex-wrap: wrap; }
+.ov-instr b { min-width: 72px; color: var(--warn); }

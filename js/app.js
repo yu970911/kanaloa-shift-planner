@@ -760,6 +760,47 @@ function renderOverview() {
     rr.appendChild(c);
   }
   tb.appendChild(rr);
+
+  // 日ごとの指示（全員出勤・休館・清掃や焼き鳥屋の人数・メモ）
+  const instrOf = (d) => {
+    const out = [];
+    if (d.closed) out.push('休館');
+    if (d.full) out.push('全員出勤');
+    const nd = (md.needs && md.needs[d.day]) || {};
+    for (const [k, n] of Object.entries(nd)) {
+      if (n === undefined || n === null || n === '') continue;
+      if (k === 'clean') { out.push(`清掃 ${n}名`); continue; }
+      const rule = state.rules.find((r) => r.id === k);
+      out.push(`${rule ? rule.label : k} ${Number(n) === 0 ? 'お休み' : n + '名'}`);
+    }
+    if (d.note) out.push(`メモ：${d.note}`);
+    return out;
+  };
+  const ir = el('tr', 'rooms');
+  ir.appendChild(th('日ごとの指示', 'nm'));
+  const noted = [];
+  for (const d of all) {
+    const list = instrOf(d);
+    const c = el('td', (d.full ? 'full ' : list.length ? 'inst ' : '') + (d.day === first.to + 1 ? 'sep' : ''));
+    if (list.length) { c.textContent = d.full ? '全' : d.closed ? '休' : '●'; c.title = list.join('・'); noted.push({ d, list }); }
+    else c.textContent = '';
+    ir.appendChild(c);
+  }
+  tb.appendChild(ir);
+  const notes = $('#ovNotes');
+  if (notes) {
+    notes.innerHTML = '';
+    if (noted.length) {
+      const ul = el('ul', 'ov-instr');
+      for (const { d, list } of noted) {
+        const li = el('li');
+        li.appendChild(el('b', '', `${d.day}日(${'日月火水木金土'[d.dow]})`));
+        li.appendChild(el('span', '', list.join('　・　')));
+        ul.appendChild(li);
+      }
+      notes.appendChild(ul);
+    }
+  }
   for (const m of members) {
     const tr = el('tr');
     tr.appendChild(th(m.name, 'nm'));
