@@ -372,50 +372,6 @@
       </div>
     </div>
 
-    <div id="headline" class="headline good"></div>
-    <div class="kpis" id="kpis"></div>
-
-    <div class="card notify" id="notifyCard">
-      <div class="card-h">
-        <h2>確定する</h2>
-        <span class="sub" id="notifySub">—</span>
-        <div class="r"><button class="btn primary" id="btnConfirm">このシフトで確定する</button></div>
-      </div>
-      <div class="pad">
-        <p class="hint" id="notifyHint"></p>
-      </div>
-    </div>
-
-    <div class="card share">
-      <div class="card-h">
-        <h2>みんなに共有する</h2>
-        <span class="sub">できあがったシフトを、社員が見られる形にして出します</span>
-      </div>
-      <div class="share-grid">
-        <div class="share-item">
-          <div class="share-t">スプレッドシートに反映</div>
-          <div class="share-d" id="sheetStatus">フロントのパソコンで開いているスプレッドシートに、最新のシフトを書き込みます。</div>
-          <div class="row">
-            <button class="btn primary" id="btnPublish">スプレッドシートに反映</button>
-            <a class="btn sm" id="sheetLink" target="_blank" rel="noopener" hidden>開く</a>
-          </div>
-        </div>
-        <div class="share-item">
-          <div class="share-t">画像で保存</div>
-          <div class="share-d">この期間（15日ぶん前後）を1枚の画像にします。LINEで送る・掲示するときに。</div>
-          <div class="row"><button class="btn" id="btnImage">画像を作る</button></div>
-        </div>
-        <div class="share-item">
-          <div class="share-t">今のシフト表に貼る</div>
-          <div class="share-d">いつものスプレッドシートに、手で貼り付けるとき。</div>
-          <div class="row">
-            <button class="btn" id="btnCopy">表をコピー</button>
-            <button class="btn" id="btnCsv">CSV</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div id="sheetView">
       <div class="card">
         <div class="card-h">
@@ -429,17 +385,6 @@
         </div>
         <div class="pad" id="legendPad"><div id="legend" class="legend"></div></div>
         <div class="sheetwrap"><div id="shiftGrid"></div></div>
-      </div>
-
-      <div class="two">
-        <div class="card">
-          <div class="card-h"><h2>申し送り</h2><span class="sub">直したほうがよい点と、その場で直せる操作</span></div>
-          <div class="pad" style="padding-top:4px"><div id="notes"></div></div>
-        </div>
-        <div class="card">
-          <div class="card-h"><h2>個人別サマリー</h2><span class="sub">出勤日数 / 休み / 最大連勤</span></div>
-          <div class="pad" style="padding-top:8px"><div id="persum"></div></div>
-        </div>
       </div>
     </div>
 
@@ -473,6 +418,63 @@
         <div class="pad">
           <div class="tlwrap"><div id="timeline"></div></div>
           <p class="hint">一番下の行は、その時間帯に館内にいる人数です。中抜けのパターン（C・D・E・H）は、休憩の時間帯が空きます。</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="headline" class="headline good"></div>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card notify" id="notifyCard">
+      <div class="card-h">
+        <h2>確定する</h2>
+        <span class="sub" id="notifySub">—</span>
+        <div class="r"><button class="btn primary" id="btnConfirm">このシフトで確定する</button></div>
+      </div>
+      <div class="pad">
+        <p class="hint" id="notifyHint"></p>
+      </div>
+    </div>
+
+    <div id="sheetExtra">
+      <div class="two">
+        <div class="card">
+          <div class="card-h"><h2>申し送り</h2><span class="sub">直したほうがよい点と、その場で直せる操作</span></div>
+          <div class="pad" style="padding-top:4px"><div id="notes"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>個人別サマリー</h2><span class="sub">出勤日数 / 休み / 最大連勤</span></div>
+          <div class="pad" style="padding-top:8px"><div id="persum"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card share">
+      <div class="card-h">
+        <h2>みんなに共有する</h2>
+        <span class="sub">できあがったシフトを、社員が見られる形にして出します</span>
+      </div>
+      <div class="share-grid">
+        <div class="share-item">
+          <div class="share-t">スプレッドシートに反映</div>
+          <div class="share-d" id="sheetStatus">フロントのパソコンで開いているスプレッドシートに、最新のシフトを書き込みます。</div>
+          <div class="row">
+            <button class="btn primary" id="btnPublish">スプレッドシートに反映</button>
+            <a class="btn sm" id="sheetLink" target="_blank" rel="noopener" hidden>開く</a>
+          </div>
+        </div>
+        <div class="share-item">
+          <div class="share-t">画像で保存</div>
+          <div class="share-d">この期間（15日ぶん前後）を1枚の画像にします。LINEで送る・掲示するときに。</div>
+          <div class="row"><button class="btn" id="btnImage">画像を作る</button></div>
+        </div>
+        <div class="share-item">
+          <div class="share-t">今のシフト表に貼る</div>
+          <div class="share-d">いつものスプレッドシートに、手で貼り付けるとき。</div>
+          <div class="row">
+            <button class="btn" id="btnCopy">表をコピー</button>
+            <button class="btn" id="btnCsv">CSV</button>
+          </div>
         </div>
       </div>
     </div>

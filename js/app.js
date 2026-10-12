@@ -2012,6 +2012,7 @@ window.addEventListener('resize', autoView);
 function showView() {
   if (!view) view = preferredView();
   $('#sheetView').hidden = view !== 'sheet';
+  $('#sheetExtra').hidden = view !== 'sheet';
   $('#tlView').hidden = view !== 'tl';
   $('#personView').hidden = view !== 'person';
   $$('#viewSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === view));
