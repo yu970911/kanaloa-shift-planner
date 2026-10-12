@@ -1,8 +1,8 @@
 // Googleフォームの回答CSV／予約客室数の取り込み
 import { PATTERNS, patternSegments } from './model.js';
 
-/** RFC4180 準拠のかんたんCSVパーサ（引用符・改行込みセル・BOM対応） */
-export function parseCSV(text) {
+/** RFC4180 準拠のかんたんパーサ（引用符・改行込みセル・BOM対応）。delim を変えればタブ区切りも読める */
+export function parseDelimited(text, delim = ',', { keepBlank = false } = {}) {
   const src = text.replace(/^﻿/, '');
   const rows = [];
   let row = [], cell = '', quoted = false;
@@ -13,14 +13,19 @@ export function parseCSV(text) {
         if (src[i + 1] === '"') { cell += '"'; i++; }
         else quoted = false;
       } else cell += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ',') { row.push(cell); cell = ''; }
+    } else if (c === '"' && cell === '') quoted = true;
+    else if (c === delim) { row.push(cell); cell = ''; }
     else if (c === '\r') { /* skip */ }
     else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
     else cell += c;
   }
   if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
-  return rows.filter((r) => r.some((v) => String(v).trim() !== ''));
+  return keepBlank ? rows : rows.filter((r) => r.some((v) => String(v).trim() !== ''));
+}
+
+/** RFC4180 準拠のかんたんCSVパーサ（引用符・改行込みセル・BOM対応） */
+export function parseCSV(text) {
+  return parseDelimited(text, ',');
 }
 
 /** 全角→半角、空白除去。氏名の突き合わせ用 */
@@ -697,12 +702,12 @@ export function normalizeShiftSymbol(raw) {
   return null;
 }
 
-/** 貼り付け（タブ区切り）・CSV のどちらでも、行×列の配列にする */
+/** 貼り付け（タブ区切り）・CSV のどちらでも、行×列の配列にする。
+ *  スプレッドシートのコピーは、改行を含むセル（「出勤↵日数」など）が " で囲まれるので、引用符も読む */
 function tableRows(text) {
   const src = String(text || '').replace(/^﻿/, '');
-  const hasTab = src.split('\n').slice(0, 20).some((l) => l.includes('\t'));
-  if (!hasTab) return parseCSV(src);
-  return src.split(/\r?\n/).map((l) => l.split('\t')).filter((r) => r.some((c) => String(c).trim() !== ''));
+  const hasTab = src.split('\n').slice(0, 30).some((l) => l.includes('\t'));
+  return parseDelimited(src, hasTab ? '\t' : ',', { keepBlank: true });   // 空行は、表の終わりの目印に使う
 }
 
 /**
@@ -741,21 +746,39 @@ export function importShiftTable(text, { members, daysInMonth }) {
     const hit = keys.filter((x) => x.key === k && !x.ambiguous);
     return hit.length ? hit[0].member : null;
   };
-  const SKIP = /必要|人数|合計|入っている|出勤数|計$/;
+  const SKIP = /必要|人数|合計|入っている|出勤数|計$|工数|就労|稼働|^焼き鳥$/;
   const counts = new Map();
+  const hasAnyDay = (row) => dayCols.some((x) => String(row[x.ci] || '').trim() !== '');
+  const isCountRow = (row) => {
+    const vals = dayCols.map((x) => String(row[x.ci] || '').trim()).filter(Boolean);
+    return vals.length > 0 && vals.every((v) => /^\d+(\.\d+)?$/.test(v));   // 数字だけ＝人数・工数の集計行
+  };
+  const nameColVotes = new Map();
+  let seenMember = false;
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i];
-    const left = row.slice(0, firstDayCol).map((c) => String(c || '').trim()).filter(Boolean);
-    if (!left.length || left.some((c) => SKIP.test(c))) continue;
+    const cellsLeft = row.slice(0, firstDayCol).map((c) => String(c || '').trim());
+    const left = cellsLeft.filter(Boolean);
+    // 名簿の人が出てきたあとの空行から先は、集計・凡例の表なので読まない
+    if (!left.length && !hasAnyDay(row)) { if (seenMember) break; continue; }
+    if (!left.length || left.some((c) => SKIP.test(c)) || isCountRow(row)) continue;
     let member = null;
-    for (const c of left) { member = findMember(c); if (member) break; }
+    let col = -1;
+    for (let ci = 0; ci < cellsLeft.length; ci++) {
+      if (!cellsLeft[ci]) continue;
+      member = findMember(cellsLeft[ci]);
+      if (member) { col = ci; break; }
+    }
     if (!member) {
-      const label = left.filter((c) => !/^\d+(\.\d+)?$/.test(c)).sort((a, b) => b.length - a.length)[0];
-      const anyCell = dayCols.some((x) => String(row[x.ci] || '').trim() !== '');
-      if (label && anyCell && !result.unmatched.includes(label)) result.unmatched.push(label);
+      // 名簿にない人：名前の列（これまでに一番多く名前が見つかった列）の値を、知らせる名前にする
+      const best = [...nameColVotes.entries()].sort((a, b) => b[1] - a[1])[0];
+      const label = (best && cellsLeft[best[0]]) || left.find((c) => !/^PA$/i.test(c) && !/^\d+(\.\d+)?$/.test(c));
+      if (label && hasAnyDay(row) && !result.unmatched.includes(label)) result.unmatched.push(label);
       continue;
     }
+    seenMember = true;
+    nameColVotes.set(col, (nameColVotes.get(col) || 0) + 1);
     const g = result.grid[member.id] || (result.grid[member.id] = {});
     for (const { ci, day } of dayCols) {
       const raw = row[ci];

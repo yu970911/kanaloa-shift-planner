@@ -463,5 +463,31 @@ console.log('\n=== 確定したシフト表の取り込み ===');
   ok(back.grid[members[0].id][3] === '休' && back.grid[members[0].id][4] === 'A', '「ファイルに保存」系の書き出し（toTSV）を読み戻せる');
 }
 
+console.log('\n=== シフト表の取り込み：Googleスプレッドシートからのコピー ===');
+{
+  const members = testMembers();
+  const nm = members.slice(0, 2).map((m) => m.name);
+  const hdr = ['区分', '名前', '担当', '"出勤\n日数"'].concat(Array.from({ length: 10 }, (_, i) => String(i + 1))).join('\t');
+  const rowT = (k, n, role, syms) => [k, n, role, '5'].concat(syms).join('\t');
+  const blank = '\t'.repeat(13);
+  const text = [
+    '10月シフト表\t2026\t年',
+    hdr,
+    ['', '', '', ''].concat(['木', '金', '土', '日', '月', '火', '水', '木', '金', '土']).join('\t'),
+    rowT('', nm[0], 'フロント', ['H', 'H', '休', 'H', 'H', 'H', 'H', 'H', '休', '休']),
+    rowT('PA', nm[1], '清掃', ['休', 'B', '休', 'B', '休', '休', '休', '休', '特', '休']),
+    rowT('', 'ミラ', '掃除/ホール', ['特', '特', '休', '特', '特', '特', '休', '特', '特', '特']),
+    blank,
+    ['稼働人数', '', '', '29'].concat(['2', '2', '0', '2', '2', '2', '1', '2', '1', '1']).join('\t'),
+    ['工数', '', '', '232'].concat(['16', '16', '0', '16', '16', '16', '8', '16', '8', '8']).join('\t'),
+    ['', '就労時間', '', '', '9：00 ～ 18：00'].join('\t'),
+  ].join('\n');
+  const r = importShiftTable(text, { members, daysInMonth: 31 });
+  ok(r.headerFound && r.matched.length === 2, '改行入りの見出し「出勤↵日数」があっても、名前を読める', `${r.headerFound} / ${r.matched.length}`);
+  ok(r.grid[members[0].id][1] === 'H' && r.grid[members[0].id][3] === '休' && r.grid[members[1].id][9] === '特', '日ごとの記号を読む');
+  eq(r.unmatched, ['ミラ'], '名簿にない人は名前だけを知らせ、集計行・時間割の行は出さない');
+  eq(r.unknown, {}, '集計の表の数字を、読めない記号として扱わない');
+}
+
 console.log(failed === 0 ? '\n全項目 PASS' : '\n' + failed + '件 FAIL');
 process.exit(failed === 0 ? 0 : 1);
