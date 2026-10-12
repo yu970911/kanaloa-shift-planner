@@ -607,3 +607,24 @@ textarea.notice { width: 100%; box-sizing: border-box; font: inherit; font-size:
 .room-note { font-size: 10px; color: var(--warn); font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .zoomctl { display: inline-flex; gap: 4px; }
+
+/* ---------- 入力済みの内容（月全体の一覧） ---------- */
+#ovCard { margin-bottom: 14px; }
+.ov-scroll { overflow-x: auto; }
+table.ov { border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+table.ov th, table.ov td { border: 1px solid var(--line2); text-align: center; min-width: 26px; height: 26px; padding: 0 2px; white-space: nowrap; }
+table.ov th.nm { text-align: left; padding: 0 8px; min-width: 96px; font-weight: 700; background: var(--surface); }
+table.ov thead th { background: var(--surface2); color: var(--muted); font-weight: 700; }
+table.ov thead th.cur { color: var(--ink); background: var(--accent-bg); }
+table.ov thead th.sun, table.ov td.sun { color: var(--sun); }
+table.ov thead th.sat, table.ov td.sat { color: var(--sat); }
+table.ov .sep { border-left: 2px solid var(--ink2); }
+table.ov tr.rooms td { background: var(--surface2); color: var(--ink2); font-size: 11px; }
+table.ov tr.rooms td.full { background: var(--warn-bg); color: var(--warn); font-weight: 700; }
+table.ov tr.rooms td.closed { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+table.ov td.c { font-weight: 700; }
+table.ov td.off { color: var(--muted); font-weight: 400; }
+table.ov td.special { background: var(--warn-bg); color: var(--warn); }
+table.ov td.ng { background: var(--bad-bg); color: var(--bad); }
+table.ov td.rq { outline: 1.5px dashed var(--accent); outline-offset: -3px; color: var(--accent); background: var(--accent-bg); font-weight: 700; }
+table.ov td.empty { color: var(--line); }

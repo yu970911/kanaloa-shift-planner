@@ -721,7 +721,87 @@ function renderStreakWishes() {
   host.appendChild(wrap);
 }
 
+/** 入力済みの内容（組んだシフト・希望休・予約客室数）を、月全体で一覧にする */
+const OV_KEY = 'kanaloa.ovOpen';
+function renderOverview() {
+  const tbl = $('#ovTable');
+  if (!tbl) return;
+  const md = mdata();
+  const all = monthDays();
+  const members = activeMembers();
+  const p = period();
+  const first = periodRange(state.year, state.month, 'first');
+  const made = members.filter((m) => md.grid && md.grid[m.id] && Object.values(md.grid[m.id]).some((v) => v !== undefined && v !== null)).length;
+  const reqs = members.reduce((a, m) => a + reqCount(m.id), 0);
+  $('#ovSub').textContent = `${state.year}年${state.month}月 ／ シフト入り ${made}名 ・ 希望休 ${reqs}日 ・ 見ている期間：${p.title}`;
+  tbl.innerHTML = '';
+  const th = (text, cls) => { const e = el('th', cls || '', text); return e; };
+  const thead = el('thead');
+  const r1 = el('tr');
+  r1.appendChild(th('', 'nm'));
+  for (const d of all) {
+    const c = th(String(d.day), (d.day >= p.from && d.day <= p.to ? 'cur ' : '') + (d.dow === 0 ? 'sun ' : d.dow === 6 ? 'sat ' : '') + (d.day === first.to + 1 ? 'sep' : ''));
+    r1.appendChild(c);
+  }
+  thead.appendChild(r1);
+  const r2 = el('tr');
+  r2.appendChild(th('曜', 'nm'));
+  for (const d of all) r2.appendChild(th('日月火水木金土'[d.dow], (d.dow === 0 ? 'sun ' : d.dow === 6 ? 'sat ' : '') + (d.day === first.to + 1 ? 'sep' : '')));
+  thead.appendChild(r2);
+  tbl.appendChild(thead);
+
+  const tb = el('tbody');
+  const rr = el('tr', 'rooms');
+  rr.appendChild(th('予約客室数', 'nm'));
+  for (const d of all) {
+    const c = el('td', (d.closed ? 'closed ' : d.full ? 'full ' : '') + (d.day === first.to + 1 ? 'sep' : ''));
+    c.textContent = d.closed ? '休館' : d.full ? `${d.rooms}★` : String(d.rooms);
+    c.title = d.closed ? '休館日' : d.full ? '全員出勤の日' : '';
+    rr.appendChild(c);
+  }
+  tb.appendChild(rr);
+  for (const m of members) {
+    const tr = el('tr');
+    tr.appendChild(th(m.name, 'nm'));
+    const g = (md.grid && md.grid[m.id]) || {};
+    const rq = md.requests[m.id] || {};
+    for (const d of all) {
+      const v = g[d.day];
+      const r = rq[d.day];
+      const c = el('td', (d.dow === 0 ? 'sun ' : d.dow === 6 ? 'sat ' : '') + (d.day === first.to + 1 ? 'sep ' : ''));
+      let text = '';
+      if (v !== undefined && v !== null && !(v === '' && m.mode !== 'always')) {
+        text = v === '' ? '○' : v;
+        if (isWorkSymbol(v)) c.classList.add('c', 'p-' + v);
+        else if (v === '休') c.classList.add('off');
+        else if (v === '特') c.classList.add('special');
+        else if (v === '✖') c.classList.add('ng');
+        if (r) c.classList.add('rq');
+      } else if (r) {
+        text = r;
+        c.classList.add('rq');
+      } else c.classList.add('empty');
+      c.textContent = text || '・';
+      tr.appendChild(c);
+    }
+    tb.appendChild(tr);
+  }
+  tbl.appendChild(tb);
+}
+(function initOverviewToggle() {
+  let open = true;
+  try { open = localStorage.getItem(OV_KEY) !== '0'; } catch (e) { /* 既定：開く */ }
+  const apply = () => {
+    $('#ovBody').hidden = !open;
+    $('#btnOvToggle').textContent = open ? 'たたむ' : '開く';
+    try { localStorage.setItem(OV_KEY, open ? '1' : '0'); } catch (e) { /* 記憶できなくても動作は続ける */ }
+  };
+  $('#btnOvToggle').addEventListener('click', () => { open = !open; apply(); });
+  apply();
+})();
+
 function renderSummary() {
+  renderOverview();
   const d = days();
   const members = requestMembers();
   const submitted = members.filter((m) => hasSubmitted(m.id)).length;
@@ -2774,7 +2854,7 @@ function applyShiftImport() {
   shiftImp = null;
   $('#shiftImpText').value = '';
   $('#shiftImpResult').innerHTML = '';
-  save(); renderDeadline(); renderRoster(); renderLaunch();
+  save(); renderDeadline(); renderRoster(); renderSummary(); renderLaunch();
   toast(`${cells}マスを取り込みました。後半は、この内容を引き継いで組みます`, 4500);
 }
 $('#btnShiftImpRead').addEventListener('click', readShiftImport);
