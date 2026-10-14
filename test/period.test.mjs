@@ -67,7 +67,7 @@ const ctx1 = (extra = {}) => ({ days: d1, genFrom: 1, monthDays: 31, members, re
 const ctx2 = (prior, extra = {}) => ({ days: all, genFrom: 16, monthDays: 31, prior, members, requests: {}, streaks: {}, rules, options, ...extra });
 const dWorkers = (grid, d) => members.filter((m) => grid[m.id][d.day] === 'D').map((m) => m.name);
 const who = (grid, day, sym) => members.filter((m) => grid[m.id][day] === sym).map((m) => m.name);
-const isWork = (v) => !!v && v !== '休' && v !== '特' && v !== '✖';
+const isWork = (v) => !!v && v !== '休' && v !== '✖';
 
 const first = generateShift(ctx1());
 const second = generateShift(ctx2(first.grid));

@@ -87,7 +87,7 @@ const line1 = msg([
 ].join('\n'));
 eq(daysOf(line1, '山田 麗奈'), [3, 4, 12], 'LINEエクスポート形式から読み取る');
 eq(daysOf(line1, '山下 創士朗'), [8, 9, 20], '複数人をまとめて読み取る');
-eq(symOf(line1, '駒澤 晴信'), '特', '「有給」を特別休暇として扱う');
+eq(symOf(line1, '駒澤 晴信'), '休', '「有給」も休みとして扱う（「特」は臨機応変に動く勤務）');
 ok(!(daysOf(line1, '山田 麗奈') || []).includes(9), '送信時刻(09:12)を日にちと誤読しない');
 
 const line2 = msg('宮平 絹江\n7日と14日休み希望\n\n日下 堅人\n21日、28日おねがいします');
@@ -225,7 +225,7 @@ const oldForm = [
   '2026/09/20 9:12,日下 堅人,"10/6（火）, 10/12（月）","10/12（月）",なし,',
 ].join('\n');
 const ofr = importFormCsv(oldForm, { members, month: 10, daysInMonth: 31 });
-ok(ofr.requests[mid('日下 堅人')][12] === '特' && ofr.requests[mid('日下 堅人')][6] === '休', '有給の列がある回答では、その日を特にする');
+ok(ofr.requests[mid('日下 堅人')][12] === '休' && ofr.requests[mid('日下 堅人')][6] === '休', '有給の列がある回答でも、その日は休み（「特」にはしない）');
 
 // 連絡事項の列も有給の列も無い自由な形のCSVは、今までどおり行全体から判定する
 const freeCsv = [
@@ -233,7 +233,7 @@ const freeCsv = [
   '山田 麗奈,"3, 4, 12",有給',
 ].join('\n');
 const frr = importFormCsv(freeCsv, { members, month: 10, daysInMonth: 31 });
-ok(frr.requests[mid('山田 麗奈')][3] === '特', '連絡事項の列が無いCSVは、行全体から「特」を判定する');
+ok(frr.requests[mid('山田 麗奈')][3] === '休', '連絡事項の列が無いCSVの「有給」は、休みとして読む');
 
 console.log('\n=== 出勤の希望（早番・遅番） ===');
 {
@@ -439,7 +439,7 @@ console.log('\n=== 呼び名（スー・ケー・アナ）での照合 ===');
 
 console.log('\n=== 確定したシフト表の取り込み ===');
 {
-  eq(['休', '公休', '特', '有給', '✖', '×', 'a', 'Ｂ', '', ' H ', '半'].map(normalizeShiftSymbol), ['休', '休', '特', '特', '✖', '✖', 'A', 'B', '', 'H', null], '記号の正規化');
+  eq(['休', '公休', '特', '有給', '✖', '×', 'a', 'Ｂ', '', ' H ', '半'].map(normalizeShiftSymbol), ['休', '休', '特', '休', '✖', '✖', 'A', 'B', '', 'H', null], '記号の正規化');
   const members = testMembers();
   const names = members.slice(0, 3).map((m) => m.name);
   const header = ['区分', '名前', '担当', '出勤'].concat(Array.from({ length: 15 }, (_, i) => String(i + 1))).join('\t');

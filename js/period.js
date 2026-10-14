@@ -101,7 +101,6 @@ export function dayText(m, v) {
     return `${v}　${PATTERNS[v].time}${ld ? `（${ld.time}は${ld.duty}）` : ''}`;
   }
   if (v === '休') return '休み';
-  if (v === '特') return '特別休暇';
   if (v === '✖') return '休み（不在）';
   if (OFF_SYMBOLS[v]) return `${v}　${OFF_SYMBOLS[v].label}`;
   if (v === '' && m.mode === 'always') return `出勤　${alwaysWindow(m).label}`;

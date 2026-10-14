@@ -25,7 +25,7 @@ const days = buildDays(2026, 9, rooms, [], options.defaultRooms);
 const byName = (n) => members.find((m) => m.name === n).id;
 const requests = {
   [byName('山田 麗奈')]: { 5: '休', 6: '休', 7: '休' },
-  [byName('サムパツ')]: { 12: '休', 13: '休', 20: '特' },
+  [byName('サムパツ')]: { 12: '休', 13: '休', 20: '✖' },
   [byName('ギミレ アスナ')]: { 3: '休', 4: '休' },
   [byName('宮平 絹江')]: { 15: '休' },
   [byName('大山 かんな')]: { 23: '休', 24: '休', 25: '休', 26: '休' },
@@ -121,7 +121,7 @@ const longestOff = (grid, m, ds) => {
   let run = 0, max = 0;
   for (const d of ds) {
     const v = grid[m.id][d.day];
-    run = (v === '休' || v === '特' || v === '✖') ? run + 1 : 0;
+    run = (v === '休' || v === '✖') ? run + 1 : 0;
     if (run > max) max = run;
   }
   return max;
@@ -140,7 +140,7 @@ const baseShort = generateShift(ctx).issues.filter((i) => i.type === 'shortage' 
 const withShort = resS.issues.filter((i) => i.type === 'shortage' && !i.optional).length;
 ok(withShort <= baseShort, '連休を入れても人員不足が増えない', '連休なし' + baseShort + ' / 連休あり' + withShort);
 
-// 13. 希望休（特・✖）は連休の置き場所より優先される
+// 13. 希望休（✖）は連休の置き場所より優先される
 const fixed = { [kinue.id]: { 5: '✖', 6: '✖' } };
 const resF = generateShift({ ...ctx, requests: fixed, streaks: { [kinue.id]: 3 } });
 ok(resF.grid[kinue.id][5] === '✖' && resF.grid[kinue.id][6] === '✖', '連休を置いても希望休を上書きしない');
@@ -253,12 +253,22 @@ for (const [y, mo] of [[2027, 2], [2026, 9], [2026, 10]]) {
     { id: 'd', label: '厨房・夕', pattern: 'D', roles: ['厨房'], base: 1, perRooms: 0, max: 1, enabled: true },
   ];
   const ds = buildDays(2026, 10, {}, [], 10);
-  const r = generateShift({ days: ds, members: kitchen, requests: { k1: { 10: '特' } }, rules: kRules, options: { ...options, iterations: 30 } });
+  const r = generateShift({ days: ds, members: kitchen, requests: { k1: { 10: '✖' } }, rules: kRules, options: { ...options, iterations: 30 } });
   const dShort = r.issues.filter((i) => i.type === 'shortage' && !i.optional);
   ok(dShort.length === 0, '夕方の厨房は、2人の休みをずらして毎日埋める', dShort.map((i) => i.day + '日').join('・') || '31日とも埋まった');
-  ok(r.grid.k1[10] === '特', '入れ替えても希望休は動かさない');
+  ok(r.grid.k1[10] === '✖', '入れ替えても希望休は動かさない');
   ok(laborIssues(kitchen, ds, r.grid, options).length === 0 && validate({ days: ds, members: kitchen, rules: kRules, options }, r.grid).issues.every((i) => i.type !== 'streak'),
     '入れ替えても連勤・法定休日・労働時間の条件を守る');
+}
+
+
+console.log('\n=== 「特」は臨機応変に動く勤務（休みではない） ===');
+{
+  const m0 = members.find((m) => m.mode === 'auto');
+  ok(isWorkSymbol('特') && !isWorkSymbol('休') && !isWorkSymbol('✖'), '「特」は出勤として扱う（休・✖は休み）');
+  ok(hoursOf(m0, '特') > 0 && hoursOf(m0, '休') === 0, '「特」の日は労働時間に数える');
+  const r = generateShift({ ...ctx, requests: { ...requests, [m0.id]: { 9: '特', 10: '特' } } });
+  ok(r.grid[m0.id][9] === '特' && r.grid[m0.id][10] === '特', '「特」を入れた日は、そのまま動かさない');
 }
 
 console.log(failed === 0 ? '\n全' + 29 + '項目 PASS' : '\n' + failed + '件 FAIL');

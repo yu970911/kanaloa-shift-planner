@@ -44,8 +44,8 @@ export const DAY_END = 22;
 // 勤務以外の記号（スプレッドシートで実際に使われているもの）
 export const OFF_SYMBOLS = {
   '休': { label: '休み',       kind: 'off' },
-  '特': { label: '特別休暇',   kind: 'off' },
   '✖': { label: '不在・NG',   kind: 'off' },
+  '特': { label: '臨機応変に動く', kind: 'work' },
   '夜': { label: '夜勤・夜対応', kind: 'work' },
   '屋': { label: '屋台',       kind: 'work' },
   '出': { label: '出張',       kind: 'work' },
@@ -325,7 +325,7 @@ export const weekIndex = (labor, days, day) => {
 /** 1日の勤務記号から労働時間を出す（パターンに無い記号・常勤の空欄は、その人の1日の時間） */
 export function hoursOf(m, val) {
   if (PATTERNS[val]) return PATTERNS[val].hours;
-  if (val === '休' || val === '特' || val === '✖' || val === null || val === undefined) return 0;
+  if (val === '休' || val === '✖' || val === null || val === undefined) return 0;
   if (val === '' && m.mode !== 'always') return 0;
   return m.dailyHours || 8;
 }

@@ -14,7 +14,7 @@ function mulberry32(a) {
   };
 }
 
-const OFF_SET = ['休', '特', '✖'];
+const OFF_SET = ['休', '✖'];   // 「特」は臨機応変に動く勤務（休みではない）
 const normName = (n) => String(n || '').replace(/[\s　]/g, '');
 export const isWorkSymbol = (s) => !!s && !OFF_SET.includes(s);
 
@@ -179,7 +179,7 @@ export function laborIssues(members, days, grid, options) {
 /**
  * シフト案を生成する。
  * ctx = { days, members, requests, streaks, rules, options }
- *   requests: { [memberId]: { [day]: '休' | '特' | '✖' } }
+ *   requests: { [memberId]: { [day]: '休' | '特'（臨機応変に動く勤務） | '✖' } }
  *   streaks:  { [memberId]: 連続で取りたい休みの日数 }  例: 「3連休が取りたい」→ 3
  * 戻り値: { grid, issues, dayStats, memberStats, cost }
  *   grid: { [memberId]: { [day]: symbol } }
@@ -516,7 +516,7 @@ function planOffsBeforeFull(members, days, grid, options, rng, genFrom) {
     if (last && last.to === d.day - 1) last.to = d.day; else blocks.push({ from: d.day, to: d.day });
   }
   if (!blocks.length) return;
-  const isOff = (v) => v === '休' || v === '特' || v === '✖';
+  const isOff = (v) => v === '休' || v === '✖';
   for (const b of blocks) {
     const L = b.to - b.from + 1;
     for (const m of members) {
@@ -663,7 +663,7 @@ function repairShortages(days, genDays, members, autoMembers, grid, locked, slot
 function placeStreak(m, n, days, grid, rng, genFrom = -Infinity) {
   const isOff = (day) => {
     const v = grid[m.id][day];
-    return v === '休' || v === '特' || v === '✖';
+    return v === '休' || v === '✖';
   };
   // すでに条件を満たしていれば触らない
   let run = 0;
@@ -672,12 +672,12 @@ function placeStreak(m, n, days, grid, rng, genFrom = -Infinity) {
     if (run >= n) return true;
   }
 
-  // 置ける窓を探す。希望休（特・✖）が入っている窓は避ける
+  // 置ける窓を探す。不在（✖）が入っている窓は避ける
   const windows = [];
   for (let i = 0; i + n <= days.length; i++) {
     const win = days.slice(i, i + n);
     if (win.some((d) => d.day < genFrom)) continue;   // すでに組んだ日は動かさない
-    if (win.some((d) => { const v = grid[m.id][d.day]; return v === '特' || v === '✖'; })) continue;
+    if (win.some((d) => { const v = grid[m.id][d.day]; return v === '✖'; })) continue;
     // 予約客室数の合計が小さい並びを優先。乱数で散らして試行ごとに違う場所も試す
     const busy = win.reduce((a, d) => a + (d.rooms || 0), 0) + rng() * 8;
     windows.push({ i, busy });
@@ -759,7 +759,7 @@ function longestOffRun(m, days, grid) {
   let run = 0, max = 0;
   for (const d of days) {
     const v = grid[m.id] ? grid[m.id][d.day] : undefined;
-    const off = v === '休' || v === '特' || v === '✖';
+    const off = v === '休' || v === '✖';
     run = off ? run + 1 : 0;
     if (run > max) max = run;
   }
@@ -910,7 +910,7 @@ export function candidatesFor(ctx, grid, day, pattern, roles, only) {
     if (m.active === false || m.mode === 'manual') return false;
     const v = grid[m.id] ? grid[m.id][day] : undefined;
     if (isWorkSymbol(v)) return false;                       // その日すでに勤務
-    if (v === '特' || v === '✖') return false;               // 希望休は動かさない
+    if (v === '✖') return false;                             // 不在は動かさない
     if (ctx.requests && ctx.requests[m.id] && ctx.requests[m.id][day]) return false;
     if (!(m.patterns || []).includes(pattern)) return false;
     return roleOk(m, { roles, only });

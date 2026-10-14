@@ -212,10 +212,9 @@ export function extractDays(value, month, daysInMonth) {
   return [...found].sort((a, b) => a - b);
 }
 
-/** 「特」「有給」等の記載があれば特別休暇として扱う */
+/** 休みの理由の記載から記号を決める。有給も休み（「特」は臨機応変に動く勤務なので、ここでは使わない） */
 export function detectSymbol(rowText) {
   const t = String(rowText || '');
-  if (/特|有給|有休|年休/.test(t)) return '特';
   if (/不在|来れ|来ら|行けま|行けな|伺えま|出られ|出勤でき|欠勤|不可|×|✖|✕/.test(t)) return '✖';
   return '休';
 }
@@ -274,7 +273,7 @@ export function importFormCsv(text, { members, month, daysInMonth, nameCol, dayC
     // 同じ人が複数回出したときは、後の回答が上書き
     for (const d of rangeDays) requests[member.id][d] = '休';
     for (const d of days) requests[member.id][d] = sym;
-    for (const d of specialDays) requests[member.id][d] = '特';
+    for (const d of specialDays) requests[member.id][d] = '休';
     if (streak) streaks[member.id] = Math.max(streaks[member.id] || 0, streak);
     if (noteText) notes.push({ member, text: noteText, ranges });
     const all = [...new Set([...days, ...specialDays, ...rangeDays])].sort((a, b) => a - b);
@@ -681,7 +680,7 @@ export function importMessages(text, { members, month, daysInMonth }) {
 /* ===== 確定したシフト表の取り込み（前半の最終版・過去の月） ===== */
 
 const SHIFT_OFF_WORDS = ['休', '休み', '公休', '希望休', 'off', '-', 'ー', '―', '－'];
-const SHIFT_SPECIAL_WORDS = ['特', '特休', '有給', '有休', '年休', '特別休暇'];
+const SHIFT_SPECIAL_WORDS = ['特休', '有給', '有休', '年休', '特別休暇'];   // 休みの一種（「特」は臨機応変に動く勤務）
 const SHIFT_NG_WORDS = ['✖', '✕', '×', '不在', '欠'];
 
 /**
@@ -695,7 +694,8 @@ export function normalizeShiftSymbol(raw) {
   if (v === '') return '';
   const lower = v.toLowerCase();
   if (SHIFT_OFF_WORDS.includes(lower)) return '休';
-  if (SHIFT_SPECIAL_WORDS.includes(v)) return '特';
+  if (SHIFT_SPECIAL_WORDS.includes(v)) return '休';
+  if (v === '特') return '特';
   if (SHIFT_NG_WORDS.includes(v)) return '✖';
   const up = v.toUpperCase();
   if (/^[A-H]$/.test(up)) return up;

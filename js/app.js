@@ -232,7 +232,7 @@ function openCalendar(m) {
   const mh = el('div', 'mh');
   const t = el('div');
   t.appendChild(el('h2', '', m.name));
-  t.appendChild(el('div', 'sub', `${state.year}年${period().title}　クリックで 休 → 特 → ✖ → なし（記号は出勤の希望）`));
+  t.appendChild(el('div', 'sub', `${state.year}年${period().title}　クリックで 休 → 特（臨機応変に動く）→ ✖ → なし（記号は出勤の希望）`));
   mh.appendChild(t);
   const x = el('button', 'btn sm x', '閉じる');
   x.addEventListener('click', closeModal);
@@ -1039,7 +1039,7 @@ function doImportCsv() {
     const parts = [];
     if (p.days.length > 4) parts.push(`${p.days[0]}日〜${p.days[p.days.length - 1]}日の ${p.days.length}日間`);
     else if (p.days.length) parts.push(p.days.map((x) => x + '日').join('・'));
-    if (p.special && p.special.length) parts.push(`うち有給 ${p.special.map((x) => x + '日').join('・')}`);
+    if (p.special && p.special.length) parts.push(`うち有給 ${p.special.map((x) => x + '日').join('・')}（休みとして扱います）`);
     if (p.streak) parts.push(`${p.streak}連休の希望`);
     ul.appendChild(el('li', '', `${p.name}：${parts.join(' ／ ') || '指定なし'}（${p.sym}）`));
   }
