@@ -9,6 +9,7 @@ import { createRun, validate, candidatesFor, isWorkSymbol, laborOf, weekCap, mak
 import { importFormCsv, importMessages, guessColumns, parseCSV, parseRoomsInput, parseRoomsInputDetail, roomsFromVacancy, parseDayRequests, toTSV, importShiftTable } from './importers.js';
 import { renderShiftImage } from './image.js';
 import { periodRange, deadlineOf, deadlineStatus, deadlineMessage, nextPeriod, fmtDate } from './period.js';
+import { buildXlsx } from './xlsx.js';
 import { loadSync, saveSync, isValidSheetUrl, isSyncReady, callSheet, buildSheetTable, stateForSheet, encodeSetup, decodeSetup } from './sheets.js';
 import * as account from './account.js';
 
@@ -2232,6 +2233,122 @@ async function downloadCSV() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+
+/** いつものスプレッドシート（R8 10月 など）と同じ体裁の .xlsx を、月全体で書き出す */
+function buildMonthSheet() {
+  const md = mdata();
+  const all = monthDays();
+  const members = activeMembers();
+  const grid = md.grid || {};
+  const n = all.length;
+  const HEAD = '#f2f2f2', BAND = '#e8f0fe';
+  const sym = {
+    D: { bg: '#d9ead3' }, E: { bg: '#f4c7c3' }, H: { bg: '#fff2cc' }, 特: { bg: '#00ffff' }, 休: { fg: '#ff0000' },
+  };
+  const dayHead = (d) => {
+    if (d.closed) return '#d9d9d9';
+    if (d.full) return '#ffd966';                                   // 全員出勤の日
+    if (d.need && d.need.clean !== undefined && d.need.clean !== '') return '#ffff00';   // 清掃を増やす日
+    return HEAD;
+  };
+  const rows = [];
+  const heights = [];
+  const merges = [];
+  const blank = () => Array(4 + n).fill(null);
+  const cell = (v, s) => ({ v, s });
+
+  const title = blank();
+  title[0] = cell(`　${state.month}月シフト表　${state.year}年（令和${state.year - 2018}年）`, { sz: 24, b: true, h: 'left' });
+  rows.push(title); heights.push(36); merges.push(`A1:${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.min(11, 3 + n)]}1`);
+  rows.push(blank()); heights.push(14);
+
+  const hs = { sz: 13, bg: HEAD, h: 'center', border: true };
+  rows.push([cell('区分', hs), cell('名前', hs), cell('担当', hs), cell('出勤日数', hs),
+    ...all.map((d) => cell(d.day, { ...hs, bg: dayHead(d) }))]);
+  heights.push(21);
+  rows.push([cell('', hs), cell('', hs), cell('', hs), cell('', hs),
+    ...all.map((d) => cell('日月火水木金土'[d.dow], { ...hs, bg: dayHead(d) }))]);
+  heights.push(21);
+  merges.push('A3:A4', 'B3:B4', 'C3:C4', 'D3:D4');
+
+  members.forEach((m, i) => {
+    const band = i % 2 ? BAND : '#ffffff';
+    const base = { sz: 12, bg: band, h: 'center', border: true };
+    let work = 0;
+    const cells = all.map((d) => {
+      const v = grid[m.id] ? grid[m.id][d.day] : undefined;
+      const shown = v === undefined || v === null ? '' : v;
+      if (isWorkSymbol(v) || (m.mode === 'always' && v === '')) work++;
+      const st = sym[shown] || {};
+      return cell(shown, { ...base, bg: st.bg || band, fg: st.fg });
+    });
+    const roles = (m.roles || []).join('/');
+    const kubun = kubunOf(m) === '社員' ? '' : kubunOf(m);
+    rows.push([
+      cell(kubun, base), cell(m.name, base),
+      cell(roles, { ...base, sz: roles.length > 10 ? 9 : 12 }),
+      cell(m.mode === 'manual' ? '' : work, base), ...cells]);
+    heights.push(36);
+  });
+
+  rows.push(blank()); heights.push(14);
+  const working = (m, v) => m.mode !== 'manual' && (isWorkSymbol(v) || (m.mode === 'always' && v === ''));
+  const perDay = all.map((d) => members.reduce((a, m) => a + (working(m, grid[m.id] ? grid[m.id][d.day] : undefined) ? 1 : 0), 0));
+  const hours = all.map((d) => members.reduce((a, m) => a + (working(m, grid[m.id] ? grid[m.id][d.day] : undefined) ? hoursOf(m, grid[m.id][d.day]) : 0), 0));
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+  const sumRow = (label, nums, bg, b) => {
+    const s = { sz: 12, bg, b, h: 'center', border: true };
+    rows.push([cell(label, s), cell('', { ...s, bg: '#ffffff' }), cell('', { ...s, bg: '#ffffff' }), cell(sum(nums), s), ...nums.map((v) => cell(v, s))]);
+    heights.push(21);
+  };
+  sumRow('稼働人数', perDay, '#d9ead3', false);
+  sumRow('工数', hours, '#93c47d', true);
+  const rs = { sz: 12, b: true, h: 'center', border: true };
+  rows.push([cell('予約客室数', rs), cell('', rs), cell('', rs), cell('', rs),
+    ...all.map((d) => cell(d.closed ? '休館' : d.rooms, { ...rs, b: false }))]);
+  heights.push(21);
+
+  // 勤務パターンの表
+  rows.push(blank()); heights.push(14);
+  const ls = { sz: 11, bg: '#e7e6e6', h: 'center', border: true };
+  rows.push([cell('パターン', ls), cell('時間', ls), cell('', ls), cell('労働時間', ls), ...Array(n).fill(null)]);
+  heights.push(21);
+  merges.push(`B${rows.length}:C${rows.length}`);
+  for (const [code, p] of Object.entries(PATTERNS)) {
+    const st = { sz: 11, h: 'center', border: true, bg: (sym[code] || {}).bg };
+    rows.push([cell(code, st), cell(p.time, { ...st, h: 'left' }), cell('', st), cell(p.hours, st), ...Array(n).fill(null)]);
+    heights.push(18);
+    merges.push(`B${rows.length}:C${rows.length}`);
+  }
+  for (const [code, label] of [['休', '休み'], ['特', '臨機応変に動く勤務（時間は決まっていない）']]) {
+    const st = { sz: 11, h: 'center', border: true, bg: (sym[code] || {}).bg, fg: (sym[code] || {}).fg };
+    rows.push([cell(code, st), cell(label, { ...st, h: 'left', fg: undefined }), cell('', st), cell('', st), ...Array(n).fill(null)]);
+    heights.push(18);
+    merges.push(`B${rows.length}:C${rows.length}`);
+  }
+
+  return {
+    name: `${state.year}年${state.month}月`,
+    colWidths: [8, 21, 16, 7, ...Array(n).fill(5.7)],
+    rowHeights: heights, rows, merges, freeze: { x: 4, y: 4 },
+  };
+}
+
+function downloadXlsx() {
+  const g = mdata().grid;
+  if (!g || !activeMembers().some((m) => g[m.id] && Object.keys(g[m.id]).length)) { toast('先にシフトを組んでください'); return; }
+  const bytes = buildXlsx(buildMonthSheet());
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = el('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `シフト_${state.year}年${state.month}月.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Excelファイルをダウンロードしました');
+}
+$('#btnXlsx').addEventListener('click', downloadXlsx);
 
 /* ---------------- 共有：スプレッドシート ---------------- */
 function renderShareStatus() {

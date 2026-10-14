@@ -10,7 +10,7 @@ const read = (p) => fs.readFileSync(path.join(SRC, p), 'utf8');
 const die = (m) => { console.error('ERROR: ' + m); process.exit(1); };
 
 /* ---------- 1. JS を1本にまとめる ---------- */
-const order = ['js/model.js', 'js/solver.js', 'js/period.js', 'js/importers.js', 'js/image.js', 'js/sheets.js', 'js/app.js'];
+const order = ['js/model.js', 'js/solver.js', 'js/period.js', 'js/importers.js', 'js/image.js', 'js/sheets.js', 'js/xlsx.js', 'js/app.js'];
 const decls = new Map();
 const parts = [];
 for (const f of order) {
